@@ -7,7 +7,7 @@ This software is for the mouse [Attack Shark X11](https://attackshark.com/produc
 
 
 #### TODO:
-- Aplicar as configurações setadas pelo usuário (transformar o script python para c++).
+- Aplicar as configurações selecionados pelo usuário.
 
 - Pegar informação a porcentagem da bateria.
 
