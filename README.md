@@ -2,18 +2,6 @@
 
 This software is for the mouse [Attack Shark X11](https://attackshark.com/products/attack-shark-x11-wireless-gaming-mouse-charging-dock), which you can control basic settings from it like polling rate, color modes, this is a workaround software control and still being developed to support all features he has on Windows.
 
-## Install:
-
-#### AUR:
-```
-sudo pacman -S xxxxx
-```
-
-#### DEB:
-```
-sudo dpkg -i xxxxx
-```
-
 
 #### TODO:
 - Aplicar as configurações setadas pelo usuário (transformar o script python para c++).
