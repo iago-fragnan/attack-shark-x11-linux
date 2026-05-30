@@ -1,6 +1,8 @@
 #include "atsx11.h"
 #include "./ui_atsx11.h"
 #include <QMessageBox>
+#include <QIcon>
+#include <QStyle>
 #include "hook.h"
 
 #include <algorithm>
@@ -11,6 +13,8 @@ atsx11::atsx11(QWidget *parent)
     , ui(new Ui::atsx11)
 {
     ui->setupUi(this);
+    setWindowIcon(QIcon(QStringLiteral(":/images/mouse.png")));
+    ui->btn_refresh->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
     devicesConnected = getDevices(false);
     for (const auto& device : devicesConnected) {
         ui->cbox_devices->addItem(QString("%1 (%2)").arg(device.second).arg(device.first));
