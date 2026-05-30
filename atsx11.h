@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+class QCloseEvent;
+
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class atsx11;
@@ -17,6 +19,9 @@ public:
     atsx11(QWidget *parent = nullptr);
     ~atsx11();
 
+protected:
+    void closeEvent(QCloseEvent *event) override;
+
 private slots:
     void on_btn_apply_clicked();
 
@@ -27,6 +32,10 @@ private slots:
     void on_chbox_alldevices_stateChanged(int arg1);
 
 private:
+    void populateDevices(bool allDevices);
+    void loadSettings();
+    void saveSettings();
+
     Ui::atsx11 *ui;
     QList<QPair<QString, QString>> devicesConnected;
 };
