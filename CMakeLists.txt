@@ -76,6 +76,7 @@ endif()
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(UDEV REQUIRED libudev)
+pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 
-target_include_directories(attackshark-x11 PRIVATE ${UDEV_INCLUDE_DIRS})
-target_link_libraries(attackshark-x11 PRIVATE ${UDEV_LIBRARIES})
+target_include_directories(attackshark-x11 PRIVATE ${UDEV_INCLUDE_DIRS} ${LIBUSB_INCLUDE_DIRS})
+target_link_libraries(attackshark-x11 PRIVATE ${UDEV_LIBRARIES} ${LIBUSB_LIBRARIES})
