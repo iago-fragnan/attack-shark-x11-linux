@@ -1,64 +1,167 @@
 #include "hook.h"
+
 #include <cstdint>
-#include <qobject.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <cstring>
 
 #include <libudev.h>
+#include <libusb-1.0/libusb.h>
 #include <QFile>
 #include <QTextStream>
-#include <QString>
-#include <QList>
-#include <QPair>
 #include <QDebug>
 
+namespace {
 
-x11mouse::x11mouse() {
-    uint8_t POLLING_RATES[4][2] = {
-        {0x08, 0xF7}, // 125 Hz (0)
-        {0x04, 0xFB}, // 250 Hz (1)
-        {0x02, 0xFD}, // 500 Hz (2)
-        {0x01, 0xFE}, // 1000 Hz (3)
-    };
+constexpr int kConfigInterface = 2;
+constexpr useconds_t kReportDelayUs = 300000;
 
-    uint8_t COLOR_MODES[4][15] = {
-        // Disabled (0)
-        {0x05, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+struct UsbDevice {
+    uint16_t vid = 0;
+    uint16_t pid = 0;
+    uint8_t bus = 0;
+    uint8_t address = 0;
+};
 
-        // Breathing (1)
-        {0x05, 0x0F, 0x01, 0x20, 0x01, 0xA8, 0x00, 0x00,
-         0xFF, 0x01, 0x06, 0x01, 0xCF, 0x00, 0x00},
+const uint8_t POLLING_RATES[4][2] = {
+    {0x08, 0xF7}, // 125 Hz
+    {0x04, 0xFB}, // 250 Hz
+    {0x02, 0xFD}, // 500 Hz
+    {0x01, 0xFE}, // 1000 Hz
+};
 
-        // Neon (2)
-        {0x05, 0x0F, 0x01, 0x30, 0x01, 0xA8, 0x00, 0x00,
-         0xFF, 0x01, 0x06, 0x01, 0xDF, 0x00, 0x00},
+const uint8_t COLOR_MODES[4][15] = {
+    {0x05, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+    {0x05, 0x0F, 0x01, 0x20, 0x01, 0xA8, 0x00, 0x00, 0xFF, 0x01, 0x06, 0x01, 0xCF, 0x00, 0x00},
+    {0x05, 0x0F, 0x01, 0x30, 0x01, 0xA8, 0x00, 0x00, 0xFF, 0x01, 0x06, 0x01, 0xDF, 0x00, 0x00},
+    {0x05, 0x0F, 0x01, 0x40, 0x01, 0xA8, 0x00, 0x00, 0xFF, 0x01, 0x06, 0x01, 0xEF, 0x00, 0x00},
+};
 
-        // Color Breathing (3)
-        {0x05, 0x0F, 0x01, 0x40, 0x01, 0xA8, 0x00, 0x00,
-         0xFF, 0x01, 0x06, 0x01, 0xEF, 0x00, 0x00},
-        };
-
+struct udev_device *usbParent(struct udev_device *dev)
+{
+    while (dev) {
+        const char *subsystem = udev_device_get_subsystem(dev);
+        const char *devtype = udev_device_get_devtype(dev);
+        if (subsystem && devtype
+            && std::strcmp(subsystem, "usb") == 0
+            && std::strcmp(devtype, "usb_device") == 0) {
+            return dev;
+        }
+        dev = udev_device_get_parent(dev);
+    }
+    return nullptr;
 }
 
+bool resolveUsbDevice(struct udev *udev, const QString &inputPath, UsbDevice &device)
+{
+    struct stat st {};
+    if (stat(inputPath.toUtf8().constData(), &st) != 0)
+        return false;
+
+    struct udev_device *input = udev_device_new_from_devnum(udev, 'c', st.st_rdev);
+    if (!input)
+        return false;
+
+    struct udev_device *usb = usbParent(input);
+    if (!usb) {
+        udev_device_unref(input);
+        return false;
+    }
+
+    const char *vid = udev_device_get_sysattr_value(usb, "idVendor");
+    const char *pid = udev_device_get_sysattr_value(usb, "idProduct");
+    const char *bus = udev_device_get_sysattr_value(usb, "busnum");
+    const char *addr = udev_device_get_sysattr_value(usb, "devnum");
+    const bool ok = vid && pid && bus && addr;
+
+    if (ok) {
+        device.vid = static_cast<uint16_t>(QString::fromUtf8(vid).toUInt(nullptr, 16));
+        device.pid = static_cast<uint16_t>(QString::fromUtf8(pid).toUInt(nullptr, 16));
+        device.bus = static_cast<uint8_t>(QString::fromUtf8(bus).toUInt());
+        device.address = static_cast<uint8_t>(QString::fromUtf8(addr).toUInt());
+    }
+
+    udev_device_unref(input);
+    return ok;
+}
+
+libusb_device_handle *openUsbDevice(libusb_context *ctx, const UsbDevice &device)
+{
+    libusb_device **list = nullptr;
+    const ssize_t count = libusb_get_device_list(ctx, &list);
+    if (count < 0)
+        return nullptr;
+
+    libusb_device_handle *handle = nullptr;
+
+    for (ssize_t i = 0; i < count; ++i) {
+        libusb_device *entry = list[i];
+        if (libusb_get_bus_number(entry) != device.bus
+            || libusb_get_device_address(entry) != device.address) {
+            continue;
+        }
+
+        libusb_device_descriptor desc {};
+        if (libusb_get_device_descriptor(entry, &desc) != 0)
+            continue;
+        if (desc.idVendor != device.vid || desc.idProduct != device.pid)
+            continue;
+
+        if (libusb_open(entry, &handle) == 0)
+            break;
+
+        handle = nullptr;
+    }
+
+    libusb_free_device_list(list, 1);
+    return handle;
+}
+
+bool sendReport(
+    libusb_context *ctx,
+    const UsbDevice &device,
+    uint16_t reportId,
+    const uint8_t *data,
+    int length)
+{
+    libusb_device_handle *handle = openUsbDevice(ctx, device);
+    if (!handle)
+        return false;
+
+    if (libusb_kernel_driver_active(handle, kConfigInterface) == 1)
+        libusb_detach_kernel_driver(handle, kConfigInterface);
+
+    const int rc = libusb_control_transfer(
+        handle,
+        0x21,
+        0x09,
+        reportId,
+        kConfigInterface,
+        const_cast<uint8_t *>(data),
+        static_cast<uint16_t>(length),
+        200);
+
+    libusb_close(handle);
+    return rc == length || rc == LIBUSB_ERROR_TIMEOUT;
+}
+
+} // namespace
 
 QList<QPair<QString, QString>> getDevices(bool allDevices)
 {
-    QList<QPair<QString, QString>> deviceList;
+    QList<QPair<QString, QString>> devices;
 
     struct udev *udev = udev_new();
     if (!udev)
-        return deviceList;
+        return devices;
 
     struct udev_enumerate *enumerate = udev_enumerate_new(udev);
     udev_enumerate_add_match_subsystem(enumerate, "input");
     udev_enumerate_scan_devices(enumerate);
 
-    struct udev_list_entry *devices = udev_enumerate_get_list_entry(enumerate);
     struct udev_list_entry *entry;
-
-    udev_list_entry_foreach(entry, devices) {
-        const char *path = udev_list_entry_get_name(entry);
-        struct udev_device *dev = udev_device_new_from_syspath(udev, path);
-
+    udev_list_entry_foreach(entry, udev_enumerate_get_list_entry(enumerate)) {
+        struct udev_device *dev = udev_device_new_from_syspath(udev, udev_list_entry_get_name(entry));
         if (!dev)
             continue;
 
@@ -68,41 +171,60 @@ QList<QPair<QString, QString>> getDevices(bool allDevices)
             continue;
         }
 
-        QString deviceName;
-        const char *nameProp = udev_device_get_property_value(dev, "NAME");
-        
-        if (nameProp) {
-            deviceName = QString::fromUtf8(nameProp).remove('"');
+        QString name;
+        if (const char *nameProp = udev_device_get_property_value(dev, "NAME")) {
+            name = QString::fromUtf8(nameProp).remove('"');
         } else {
             QFile file(QString::fromUtf8(udev_device_get_syspath(dev)) + "/device/name");
-            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                deviceName = QTextStream(&file).readLine();
-            }
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+                name = QTextStream(&file).readLine();
         }
 
-        if (deviceName.isEmpty())
-            deviceName = QStringLiteral("Unknown");
-
-        deviceList.append({QString::fromUtf8(devnode), deviceName});
-
+        devices.append({QString::fromUtf8(devnode), name.isEmpty() ? QStringLiteral("Unknown") : name});
         udev_device_unref(dev);
     }
 
     udev_enumerate_unref(enumerate);
     udev_unref(udev);
-
-    return deviceList;
+    return devices;
 }
 
-// sel_deviceID = pathName
-// sel_colormode = ID of the array of the colormodee
-// sel_prate = ID of the array of the polling rate
-int setConfig(QString sel_deviceID, int sel_colormode, int sel_prate){
+int setConfig(QString devicePath, int colorMode, int pollingRate)
+{
+    if (colorMode < 0 || colorMode >= 4 || pollingRate < 0 || pollingRate >= 4)
+        return -1;
 
-    return 0;
+    struct udev *udev = udev_new();
+    if (!udev)
+        return -2;
+
+    UsbDevice device;
+    if (!resolveUsbDevice(udev, devicePath, device)) {
+        udev_unref(udev);
+        return -3;
+    }
+    udev_unref(udev);
+
+    libusb_context *ctx = nullptr;
+    if (libusb_init(&ctx) != 0)
+        return -2;
+
+    const uint8_t pollingReport[9] = {
+        0x06, 0x09, 0x01,
+        POLLING_RATES[pollingRate][0],
+        POLLING_RATES[pollingRate][1],
+        0x00, 0x00, 0x00, 0x00,
+    };
+
+    const bool pollingOk = sendReport(ctx, device, 0x0306, pollingReport, sizeof(pollingReport));
+    usleep(kReportDelayUs);
+    const bool colorOk = sendReport(ctx, device, 0x0305, COLOR_MODES[colorMode], sizeof(COLOR_MODES[colorMode]));
+
+    libusb_exit(ctx);
+    return pollingOk && colorOk ? 0 : -5;
 }
 
-int getBatteryInfo(){
+int getBatteryInfo()
+{
     return -1;
-    // return rand() % 100 + 1;
 }

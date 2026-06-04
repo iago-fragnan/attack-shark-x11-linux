@@ -1,6 +1,8 @@
 #include "atsx11.h"
 #include "./ui_atsx11.h"
 #include <QMessageBox>
+#include <QIcon>
+#include <QStyle>
 #include "hook.h"
 
 #include <algorithm>
@@ -11,6 +13,8 @@ atsx11::atsx11(QWidget *parent)
     , ui(new Ui::atsx11)
 {
     ui->setupUi(this);
+    setWindowIcon(QIcon(QStringLiteral(":/images/mouse.png")));
+    ui->btn_refresh->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
     devicesConnected = getDevices(false);
     for (const auto& device : devicesConnected) {
         ui->cbox_devices->addItem(QString("%1 (%2)").arg(device.second).arg(device.first));
@@ -36,16 +40,29 @@ void atsx11::on_btn_apply_clicked()
     int color = ui->cbox_colormodes->currentIndex();
     int prate = ui->cbox_pollingrate->currentIndex();
 
-    QList<QPair<QString, QString>> deviceSelected;
+    QString devicePath;
     for (const auto& pair : devicesConnected) {
         if (QString("%1 (%2)").arg(pair.second).arg(pair.first) == device) {
-            deviceSelected.append(pair);
+            devicePath = pair.first;
+            break;
         }
     }
 
+    if (devicePath.isEmpty()) {
+        ui->lbl_debug->setText("<html><head/><body><p><span style='color:red;'>Error: device not found</span></p></body></html>");
+        QMessageBox::warning(this, "Error", "Device not found in the connected list.");
+        return;
+    }
+
+    const int result = setConfig(devicePath, color, prate);
+    if (result != 0) {
+        ui->lbl_debug->setText("<html><head/><body><p><span style='color:red;'>Error: failed to apply settings</span></p></body></html>");
+        QMessageBox::warning(this, "Error", "Failed to apply settings to the device (code " + QString::number(result) + ").");
+        return;
+    }
 
     ui->lbl_debug->setText("<html><head/><body><p><span style='color:green;'>Sucessfully applied</span></p></body></html>");
-    QMessageBox::information(this, "Debug", "Device: " + deviceSelected.first().first + "\nColor: "+ QString::number(color) +"\nPolling Rate: " + QString::number(prate));
+    QMessageBox::information(this, "Success", "Settings applied to " + devicePath + ".");
 }
 
 
