@@ -1,11 +1,21 @@
 #include "atsx11.h"
 #include "./ui_atsx11.h"
+#include <QCloseEvent>
 #include <QMessageBox>
 #include <QIcon>
+#include <QSettings>
 #include <QStyle>
 #include "hook.h"
 
 #include <algorithm>
+
+
+namespace {
+
+constexpr auto kSettingsOrg = "AttackShark";
+constexpr auto kSettingsApp = "X11";
+
+} // namespace
 
 
 atsx11::atsx11(QWidget *parent)
@@ -15,10 +25,7 @@ atsx11::atsx11(QWidget *parent)
     ui->setupUi(this);
     setWindowIcon(QIcon(QStringLiteral(":/images/mouse.png")));
     ui->btn_refresh->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
-    devicesConnected = getDevices(false);
-    for (const auto& device : devicesConnected) {
-        ui->cbox_devices->addItem(QString("%1 (%2)").arg(device.second).arg(device.first));
-    }
+    loadSettings();
     ui->lbl_batteryinfo->setEnabled(false);
     ui->pbar_batteryinfo->setEnabled(false);
 }
@@ -26,6 +33,68 @@ atsx11::atsx11(QWidget *parent)
 atsx11::~atsx11()
 {
     delete ui;
+}
+
+void atsx11::closeEvent(QCloseEvent *event)
+{
+    saveSettings();
+    QMainWindow::closeEvent(event);
+}
+
+void atsx11::populateDevices(bool allDevices)
+{
+    ui->cbox_devices->clear();
+    devicesConnected = getDevices(allDevices);
+    for (const auto &device : devicesConnected) {
+        ui->cbox_devices->addItem(QString("%1 (%2)").arg(device.second).arg(device.first));
+    }
+}
+
+void atsx11::loadSettings()
+{
+    QSettings settings(kSettingsOrg, kSettingsApp);
+
+    const bool allDevices = settings.value(QStringLiteral("allDevices"), false).toBool();
+    const int colorMode = settings.value(QStringLiteral("colorMode"), 0).toInt();
+    const int pollingRate = settings.value(QStringLiteral("pollingRate"), 0).toInt();
+    const QString devicePath = settings.value(QStringLiteral("devicePath")).toString();
+
+    ui->chbox_alldevices->blockSignals(true);
+    ui->chbox_alldevices->setChecked(allDevices);
+    ui->chbox_alldevices->blockSignals(false);
+
+    populateDevices(allDevices);
+
+    if (!devicePath.isEmpty()) {
+        for (int i = 0; i < devicesConnected.size(); ++i) {
+            if (devicesConnected[i].first == devicePath) {
+                ui->cbox_devices->setCurrentIndex(i);
+                break;
+            }
+        }
+    }
+
+    if (colorMode >= 0 && colorMode < ui->cbox_colormodes->count())
+        ui->cbox_colormodes->setCurrentIndex(colorMode);
+    if (pollingRate >= 0 && pollingRate < ui->cbox_pollingrate->count())
+        ui->cbox_pollingrate->setCurrentIndex(pollingRate);
+}
+
+void atsx11::saveSettings()
+{
+    QSettings settings(kSettingsOrg, kSettingsApp);
+
+    settings.setValue(QStringLiteral("allDevices"), ui->chbox_alldevices->isChecked());
+    settings.setValue(QStringLiteral("colorMode"), ui->cbox_colormodes->currentIndex());
+    settings.setValue(QStringLiteral("pollingRate"), ui->cbox_pollingrate->currentIndex());
+
+    QString devicePath;
+    const int index = ui->cbox_devices->currentIndex();
+    if (index >= 0 && index < devicesConnected.size())
+        devicePath = devicesConnected[index].first;
+
+    settings.setValue(QStringLiteral("devicePath"), devicePath);
+    settings.sync();
 }
 
 
@@ -61,6 +130,7 @@ void atsx11::on_btn_apply_clicked()
         return;
     }
 
+    saveSettings();
     ui->lbl_debug->setText("<html><head/><body><p><span style='color:green;'>Sucessfully applied</span></p></body></html>");
     QMessageBox::information(this, "Success", "Settings applied to " + devicePath + ".");
 }
@@ -68,6 +138,7 @@ void atsx11::on_btn_apply_clicked()
 
 void atsx11::on_cbox_devices_currentIndexChanged(int index)
 {
+    Q_UNUSED(index);
     ui->lbl_debug->setText("Battery information update");
     ui->lbl_batteryinfo->setEnabled(true);
     ui->pbar_batteryinfo->setEnabled(true);
@@ -78,48 +149,25 @@ void atsx11::on_cbox_devices_currentIndexChanged(int index)
 void atsx11::on_btn_refresh_clicked()
 {
     ui->cbox_devices->setCurrentIndex(-1);
-    ui->cbox_devices->clear();
-
     ui->lbl_batteryinfo->setEnabled(false);
     ui->pbar_batteryinfo->setEnabled(false);
     ui->pbar_batteryinfo->setValue(-1);
 
-    if(ui->chbox_alldevices->isChecked()){
-        devicesConnected = getDevices(true);
-    } else {
-        devicesConnected = getDevices(false);
-    }
-    int quantity = 0;
-    for (const auto& device : devicesConnected) {
-        QString displayText = QString("%1 (%2)").arg(device.second).arg(device.first);
-        ui->cbox_devices->addItem(displayText);
-        quantity++;
-    }
+    populateDevices(ui->chbox_alldevices->isChecked());
 
+    const int quantity = devicesConnected.size();
     ui->lbl_debug->setText("Refreshed devices list (" + QString::number(quantity) + " devices).");
-
 }
 
-// arg1
-// 0 = Unchecked
-// 2 = Checked (?)
 void atsx11::on_chbox_alldevices_stateChanged(int arg1)
 {
-    if(arg1 == 0){
-        devicesConnected = getDevices(false);
-        ui->lbl_debug->setText("Listing only mice devices.");
-    } else {
-        devicesConnected = getDevices(true);
-        ui->lbl_debug->setText("Listing all devices.");
-    }
     ui->cbox_devices->clear();
-    int quantity = 0;
-    for (const auto& device : devicesConnected) {
-        QString displayText = QString("%1 (%2)").arg(device.second).arg(device.first);
-        ui->cbox_devices->addItem(displayText);
-        quantity++;
+    populateDevices(arg1 != 0);
+
+    const int quantity = devicesConnected.size();
+    if (arg1 == 0) {
+        ui->lbl_debug->setText("Listing only mice devices (" + QString::number(quantity) + ").");
+    } else {
+        ui->lbl_debug->setText("Listing all devices (" + QString::number(quantity) + ").");
     }
-    ui->lbl_debug->setText("Listing all devices (" + QString::number(quantity) + ").");
-
 }
-
