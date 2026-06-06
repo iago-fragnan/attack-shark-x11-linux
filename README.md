@@ -7,8 +7,26 @@ This software is for the mouse [Attack Shark X11](https://attackshark.com/produc
 
 
 #### TODO:
-- Aplicar as configurações selecionados pelo usuário.
+- [✔️] Polling Rate
+
+- [✔️] DPI
+
+- [✔️] LED Colors
+
+- [✔️] Aplicar as configurações selecionados pelo usuário.
 
 - Pegar informação a porcentagem da bateria.
 
-- Mostrar as configurações aplicadas atualmente ao abrir.
+- Indicador de carregamento da bateria
+
+- Gerenciador de energia e controle de standby
+
+- Key response time
+
+- Ripple Control
+
+- Angle Snap
+  
+- [✔️] Mostrar as configurações aplicadas atualmente ao abrir.
+
+- Macros
