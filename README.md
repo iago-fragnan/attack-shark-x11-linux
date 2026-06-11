@@ -6,27 +6,17 @@
 This software is for the mouse [Attack Shark X11](https://attackshark.com/products/attack-shark-x11-wireless-gaming-mouse-charging-dock), which you can control basic settings from it like polling rate, color modes, this is a workaround software control and still being developed to support all features he has on Windows.
 
 
-#### TODO:
-- [✔️] Polling Rate
+## TODO
 
-- [✔️] DPI
-
-- [✔️] LED Colors
-
-- [✔️] Aplicar as configurações selecionados pelo usuário.
-
-- [✔️] Pegar informação a porcentagem da bateria.
-
-- Indicador de carregamento da bateria
-
-- Gerenciador de energia e controle de standby
-
-- Key response time
-
-- Ripple Control
-
-- Angle Snap
-  
-- [✔️] Mostrar as configurações aplicadas atualmente ao abrir.
-
-- Macros
+- [x] Polling Rate
+- [x] DPI Configuration
+- [x] LED Color Control
+- [x] Apply User-Selected Settings
+- [x] Battery Percentage Monitoring
+- [x] Display Current Applied Settings on Startup
+- [ ] Battery Charging Indicator
+- [ ] Power Management & Standby Control
+- [ ] Key Response Time
+- [ ] Ripple Control
+- [ ] Angle Snapping
+- [ ] Macro Support
