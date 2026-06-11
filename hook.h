@@ -6,7 +6,7 @@
 #include <QPair>
 
 int setConfig(QString devicePath, int colorMode, int pollingRate);
-int getBatteryInfo();
+int getBatteryInfo(const QString &devicePath);
 QList<QPair<QString, QString>> getDevices(bool allDevices);
 
 #endif // HOOK_H

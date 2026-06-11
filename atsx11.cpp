@@ -138,11 +138,17 @@ void atsx11::on_btn_apply_clicked()
 
 void atsx11::on_cbox_devices_currentIndexChanged(int index)
 {
-    Q_UNUSED(index);
+    if (index < 0 || index >= devicesConnected.size()) {
+        ui->lbl_batteryinfo->setEnabled(false);
+        ui->pbar_batteryinfo->setEnabled(false);
+        return;
+    }
+
+    const QString &devicePath = devicesConnected[index].first;
     ui->lbl_debug->setText("Battery information update");
     ui->lbl_batteryinfo->setEnabled(true);
     ui->pbar_batteryinfo->setEnabled(true);
-    ui->pbar_batteryinfo->setValue(getBatteryInfo());
+    ui->pbar_batteryinfo->setValue(getBatteryInfo(devicePath));
 }
 
 

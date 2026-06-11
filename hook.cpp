@@ -224,7 +224,83 @@ int setConfig(QString devicePath, int colorMode, int pollingRate)
     return pollingOk && colorOk ? 0 : -5;
 }
 
-int getBatteryInfo()
+
+// https://github.com/HarukaYamamoto0/attack-shark-x11-driver/blob/80fb0e69e59f2aa7185951622bcdadeb0bd4af0e/docs/battery-status.md
+int getBatteryInfo(const QString &devicePath)
 {
-    return -1;
+    constexpr uint8_t  kBatteryIface    = 2;
+    constexpr uint8_t  kBatteryEndpoint = 0x83;
+    constexpr int      kTransferTimeout = 500;  // ms
+    constexpr int      kBufSize         = 64;
+    constexpr uint8_t  kSig0 = 0x03, kSig1 = 0x55, kSig2 = 0x40, kSig3 = 0x01;
+    constexpr int      kMinPacketLen    = 5;
+
+    struct udev *udev = udev_new();
+    if (!udev)
+        return -1;
+
+    UsbDevice device;
+    if (!resolveUsbDevice(udev, devicePath, device)) {
+        udev_unref(udev);
+        return -1;
+    }
+    udev_unref(udev);
+
+    libusb_context *ctx = nullptr;
+    if (libusb_init(&ctx) != 0)
+        return -1;
+
+    libusb_device_handle *handle = openUsbDevice(ctx, device);
+    if (!handle) {
+        libusb_exit(ctx);
+        return -1;
+    }
+
+    int battery = -1;
+
+    bool driverWasAttached = false;
+    if (libusb_kernel_driver_active(handle, kBatteryIface) == 1) {
+        if (libusb_detach_kernel_driver(handle, kBatteryIface) == 0)
+            driverWasAttached = true;
+        else {
+            libusb_close(handle);
+            libusb_exit(ctx);
+            return -1;
+        }
+    }
+
+    if (libusb_claim_interface(handle, kBatteryIface) != 0) {
+        if (driverWasAttached)
+            libusb_attach_kernel_driver(handle, kBatteryIface);
+        libusb_close(handle);
+        libusb_exit(ctx);
+        return -1;
+    }
+    uint8_t buf[kBufSize] = {};
+    int transferred = 0;
+    const int rc = libusb_interrupt_transfer(
+        handle,
+        kBatteryEndpoint,
+        buf,
+        kBufSize,
+        &transferred,
+        kTransferTimeout);
+
+    if ((rc == 0 || rc == LIBUSB_ERROR_TIMEOUT) &&
+        transferred >= kMinPacketLen &&
+        buf[0] == kSig0 &&
+        buf[1] == kSig1 &&
+        buf[2] == kSig2 &&
+        buf[3] == kSig3)
+    {
+        battery = static_cast<int>(buf[4]);
+    }
+
+    libusb_release_interface(handle, kBatteryIface);
+    if (driverWasAttached)
+        libusb_attach_kernel_driver(handle, kBatteryIface);
+
+    libusb_close(handle);
+    libusb_exit(ctx);
+    return battery;
 }
