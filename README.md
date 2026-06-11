@@ -15,7 +15,7 @@ This software is for the mouse [Attack Shark X11](https://attackshark.com/produc
 
 - [✔️] Aplicar as configurações selecionados pelo usuário.
 
-- Pegar informação a porcentagem da bateria.
+- [✔️] Pegar informação a porcentagem da bateria.
 
 - Indicador de carregamento da bateria
 
