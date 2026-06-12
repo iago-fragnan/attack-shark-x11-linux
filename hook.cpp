@@ -276,24 +276,29 @@ int getBatteryInfo(const QString &devicePath)
         libusb_exit(ctx);
         return -1;
     }
-    uint8_t buf[kBufSize] = {};
-    int transferred = 0;
-    const int rc = libusb_interrupt_transfer(
-        handle,
-        kBatteryEndpoint,
-        buf,
-        kBufSize,
-        &transferred,
-        kTransferTimeout);
+    constexpr int kMaxRetries = 5;
+    for (int attempt = 0; attempt < kMaxRetries && battery < 0; ++attempt) {
+        uint8_t buf[kBufSize] = {};
+        int transferred = 0;
+        const int rc = libusb_interrupt_transfer(
+            handle,
+            kBatteryEndpoint,
+            buf,
+            kBufSize,
+            &transferred,
+            kTransferTimeout);
 
-    if ((rc == 0 || rc == LIBUSB_ERROR_TIMEOUT) &&
-        transferred >= kMinPacketLen &&
-        buf[0] == kSig0 &&
-        buf[1] == kSig1 &&
-        buf[2] == kSig2 &&
-        buf[3] == kSig3)
-    {
-        battery = static_cast<int>(buf[4]);
+        if (rc != 0 && rc != LIBUSB_ERROR_TIMEOUT)
+            break;
+
+        if (transferred >= kMinPacketLen &&
+            buf[0] == kSig0 &&
+            buf[1] == kSig1 &&
+            buf[2] == kSig2 &&
+            buf[3] == kSig3)
+        {
+            battery = static_cast<int>(buf[4]);
+        }
     }
 
     libusb_release_interface(handle, kBatteryIface);

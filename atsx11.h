@@ -2,6 +2,7 @@
 #define ATSX11_H
 
 #include <QMainWindow>
+#include <QFutureWatcher>
 
 class QCloseEvent;
 
@@ -31,6 +32,8 @@ private slots:
 
     void on_chbox_alldevices_stateChanged(int arg1);
 
+    void onBatteryInfoReady();
+
 private:
     void populateDevices(bool allDevices);
     void loadSettings();
@@ -38,5 +41,6 @@ private:
 
     Ui::atsx11 *ui;
     QList<QPair<QString, QString>> devicesConnected;
+    QFutureWatcher<int> *m_batteryWatcher = nullptr;
 };
 #endif // ATSX11_H

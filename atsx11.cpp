@@ -5,6 +5,7 @@
 #include <QIcon>
 #include <QSettings>
 #include <QStyle>
+#include <QtConcurrent/QtConcurrent>
 #include "hook.h"
 
 #include <algorithm>
@@ -144,11 +145,43 @@ void atsx11::on_cbox_devices_currentIndexChanged(int index)
         return;
     }
 
-    const QString &devicePath = devicesConnected[index].first;
-    ui->lbl_debug->setText("Battery information update");
+    // Cancel any in-flight battery read before starting a new one
+    if (m_batteryWatcher) {
+        m_batteryWatcher->cancel();
+        m_batteryWatcher->waitForFinished();
+        m_batteryWatcher->deleteLater();
+        m_batteryWatcher = nullptr;
+    }
+
+    const QString devicePath = devicesConnected[index].first;
+    ui->lbl_debug->setText("Reading battery\u2026");
     ui->lbl_batteryinfo->setEnabled(true);
     ui->pbar_batteryinfo->setEnabled(true);
-    ui->pbar_batteryinfo->setValue(getBatteryInfo(devicePath));
+    ui->pbar_batteryinfo->setValue(0);
+
+    m_batteryWatcher = new QFutureWatcher<int>(this);
+    connect(m_batteryWatcher, &QFutureWatcher<int>::finished,
+            this, &atsx11::onBatteryInfoReady);
+    m_batteryWatcher->setFuture(
+        QtConcurrent::run([devicePath]() { return getBatteryInfo(devicePath); }));
+}
+
+void atsx11::onBatteryInfoReady()
+{
+    if (!m_batteryWatcher)
+        return;
+
+    const int battery = m_batteryWatcher->result();
+    m_batteryWatcher->deleteLater();
+    m_batteryWatcher = nullptr;
+
+    if (battery < 0) {
+        ui->lbl_debug->setText("<html><head/><body><p><span style='color:orange;'>Battery info unavailable</span></p></body></html>");
+        ui->pbar_batteryinfo->setValue(0);
+    } else {
+        ui->lbl_debug->setText("Battery: " + QString::number(battery) + "%");
+        ui->pbar_batteryinfo->setValue(battery);
+    }
 }
 
 
