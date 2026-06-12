@@ -69,6 +69,14 @@ install(TARGETS attackshark-x11
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+install(FILES packaging/attackshark-x11.desktop
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+)
+
+install(FILES packaging/icons/attackshark-x11.png
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps
+)
+
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(attackshark-x11)
 endif()
