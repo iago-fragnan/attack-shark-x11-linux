@@ -5,6 +5,23 @@
 
 This software is for the mouse [Attack Shark X11](https://attackshark.com/products/attack-shark-x11-wireless-gaming-mouse-charging-dock), which you can control basic settings from it like polling rate, color modes, this is a workaround software control and still being developed to support all features he has on Windows.
 
+## Install
+
+**Arch Linux (AUR):**
+
+Using **yay**:
+```
+yay -S attack-shark-x11
+```
+
+Using **paru**:
+```
+paru -S attack-shark-x11
+```
+
+**Debian:**
+
+*soon*
 
 ## TODO
 
