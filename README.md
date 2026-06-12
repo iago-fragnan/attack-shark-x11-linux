@@ -11,12 +11,12 @@ This software is for the mouse [Attack Shark X11](https://attackshark.com/produc
 
 Using **yay**:
 ```
-yay -S attack-shark-x11
+yay -S attackshark-x11
 ```
 
 Using **paru**:
 ```
-paru -S attack-shark-x11
+paru -S attackshark-x11
 ```
 
 **Debian:**
