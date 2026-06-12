@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Attack Shark X11
+Comment=Attack Shark mouse configuration utility
+Exec=attackshark-x11
+Icon=attackshark-x11
+Terminal=false
+Categories=Settings;

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(attackshark-x11 VERSION 0.1 LANGUAGES CXX)
+project(attackshark-x11 VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -75,8 +75,18 @@ endif()
 
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(UDEV REQUIRED libudev)
-pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
+pkg_check_modules(UDEV REQUIRED systemd)
+pkg_check_modules(LIBUSB REQUIRED libusb)
 
 target_include_directories(attackshark-x11 PRIVATE ${UDEV_INCLUDE_DIRS} ${LIBUSB_INCLUDE_DIRS})
 target_link_libraries(attackshark-x11 PRIVATE ${UDEV_LIBRARIES} ${LIBUSB_LIBRARIES})
+
+install(FILES
+    packaging/attackshark-x11.desktop
+    DESTINATION share/applications
+)
+
+install(FILES
+    packaging/icons/attackshark-x11.png
+    DESTINATION share/pixmaps
+)
