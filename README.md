@@ -37,3 +37,5 @@ paru -S attackshark-x11
 - [ ] Ripple Control
 - [ ] Angle Snapping
 - [ ] Macro Support
+- [ ] Minimize to System Tray
+- [ ] Auto startup
