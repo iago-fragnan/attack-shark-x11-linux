@@ -8,20 +8,14 @@ This software is for the mouse [Attack Shark X11](https://attackshark.com/produc
 ## Install
 
 **Arch Linux (AUR):**
-
-Using **yay**:
-```
-yay -S attackshark-x11
-```
-
-Using **paru**:
-```
-paru -S attackshark-x11
+```sh
+paru -S attackshark-x11 # you can also use yay
 ```
 
 **Debian:**
 
-*soon*
+soon, but you can build it for yourself
+
 
 ## TODO
 
