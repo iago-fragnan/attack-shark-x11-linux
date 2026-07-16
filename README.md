@@ -33,3 +33,4 @@ soon, but you can build it for yourself
 - [ ] Macro Support
 - [ ] Minimize to System Tray
 - [ ] Auto startup
+- [ ] Profiles
