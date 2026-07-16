@@ -34,6 +34,22 @@ private slots:
 
     void onBatteryInfoReady();
 
+    void on_horizontalSlider_sliderMoved(int position);
+
+    void on_checkBox_stateChanged(int arg1);
+
+    void on_sld_keyreptime_valueChanged(int value);
+
+    void on_sld_keyreptime_actionTriggered(int action);
+
+    void on_sld_keyreptime_sliderMoved(int position);
+
+    void on_sld_keyreptime_rangeChanged(int min, int max);
+
+    void on_horizontalSlider_valueChanged(int value);
+
+    void on_sld_keyresptime_sliderMoved(int position);
+
 private:
     void populateDevices(bool allDevices);
     void loadSettings();

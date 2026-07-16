@@ -210,3 +210,15 @@ void atsx11::on_chbox_alldevices_stateChanged(int arg1)
         ui->lbl_debug->setText("Listing all devices (" + QString::number(quantity) + ").");
     }
 }
+
+void atsx11::on_checkBox_stateChanged(int arg1)
+{
+    ui->lbl_debug->setText("[DEBUG] Ripple Control: " + QString(arg1 != 0 ? "Enabled" : "Disabled"));
+}
+
+void atsx11::on_sld_keyresptime_sliderMoved(int position)
+{
+    ui->lbl_kreptimeValueDisplay->setText(QString::number(position) + " ms");
+    ui->lbl_debug->setText("[DEBUG] Ripple Speed: " + QString::number(position));
+}
+

@@ -34,3 +34,5 @@ soon, but you can build it for yourself
 - [ ] Minimize to System Tray
 - [ ] Auto startup
 - [ ] Profiles
+- [ ] Automatic Device Selection
+- [ ] Custom window for manual selection device
