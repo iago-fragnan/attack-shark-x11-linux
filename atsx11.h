@@ -50,6 +50,10 @@ private slots:
 
     void on_sld_keyresptime_sliderMoved(int position);
 
+    void on_sldr_sleeptime_sliderMoved(int position);
+
+    void on_sldr_deepSleepTime_sliderMoved(int position);
+
 private:
     void populateDevices(bool allDevices);
     void loadSettings();

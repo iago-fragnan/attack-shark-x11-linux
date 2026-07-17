@@ -222,3 +222,12 @@ void atsx11::on_sld_keyresptime_sliderMoved(int position)
     ui->lbl_debug->setText("[DEBUG] Ripple Speed: " + QString::number(position));
 }
 
+void atsx11::on_sldr_deepSleepTime_sliderMoved(int position)
+{
+    ui->lbl_deepsleeptimeValue->setText("Deep Sleep Time: " + QString::number(position) + "min");
+}
+
+void atsx11::on_sldr_sleeptime_sliderMoved(int position)
+{
+    ui->lbl_sleepTimerValue->setText("Sleep Time: " + QString::number(position) + "min");
+}
