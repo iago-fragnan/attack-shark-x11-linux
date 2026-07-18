@@ -28,8 +28,8 @@ soon, but you can build it for yourself
 - [ ] Battery Charging Indicator
 - [ ] Power Management & Standby Control
 - [ ] Key Response Time
-- [ ] Ripple Control
-- [ ] Angle Snapping
+- [x] Ripple Control
+- [x] Angle Snapping
 - [ ] Macro Support
 - [ ] Minimize to System Tray
 - [ ] Auto startup
