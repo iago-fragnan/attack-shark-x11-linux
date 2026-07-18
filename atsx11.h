@@ -37,6 +37,7 @@ private:
     void populateDevices(bool allDevices);
     void loadSettings();
     void saveSettings();
+    void updateInfoLabels();
 
     Ui::atsx11 *ui;
     QList<QPair<QString, QString>> devicesConnected;

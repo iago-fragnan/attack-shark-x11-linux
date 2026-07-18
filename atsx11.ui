@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>750</width>
-    <height>400</height>
+    <width>745</width>
+    <height>390</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -21,14 +21,14 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>750</width>
-    <height>400</height>
+    <width>745</width>
+    <height>390</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>750</width>
-    <height>400</height>
+    <width>745</width>
+    <height>390</height>
    </size>
   </property>
   <property name="sizeIncrement">
@@ -75,7 +75,7 @@
    <widget class="QLabel" name="lbl_debug">
     <property name="geometry">
      <rect>
-      <x>490</x>
+      <x>480</x>
       <y>370</y>
       <width>261</width>
       <height>21</height>
@@ -214,7 +214,7 @@
       <x>540</x>
       <y>90</y>
       <width>171</width>
-      <height>61</height>
+      <height>65</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_3">
@@ -357,7 +357,7 @@
       <x>0</x>
       <y>340</y>
       <width>111</width>
-      <height>52</height>
+      <height>41</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_7">
@@ -419,6 +419,12 @@
     <layout class="QGridLayout" name="gridLayout_8">
      <item row="0" column="0">
       <widget class="QLabel" name="lbl_actualsettings">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>15</height>
+        </size>
+       </property>
        <property name="text">
         <string>Settings Applied:</string>
        </property>
@@ -901,36 +907,36 @@
        <property name="flat">
         <bool>false</bool>
        </property>
-       <widget class="QLabel" name="lbl_ledValue">
+       <widget class="QWidget" name="verticalLayoutWidget_4">
         <property name="geometry">
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>101</width>
-          <height>18</height>
+          <width>121</width>
+          <height>51</height>
          </rect>
         </property>
-        <property name="text">
-         <string>Active LED Color</string>
-        </property>
-       </widget>
-       <widget class="QLabel" name="lbl_infoLEDValue">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>20</y>
-          <width>111</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>12</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>DISABLED</string>
-        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_4">
+         <item>
+          <widget class="QLabel" name="lbl_ledValue">
+           <property name="text">
+            <string>Active LED Color</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_infoLEDValue">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>DISABLED</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </widget>
      </item>
@@ -1411,37 +1417,37 @@
        <property name="flat">
         <bool>false</bool>
        </property>
-       <widget class="QLabel" name="lbl_PLR">
+       <widget class="QWidget" name="verticalLayoutWidget_3">
         <property name="geometry">
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>81</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Polling Rate</string>
-        </property>
-       </widget>
-       <widget class="QLabel" name="lbl_PLRValue">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>20</y>
           <width>121</width>
-          <height>18</height>
+          <height>51</height>
          </rect>
         </property>
-        <property name="font">
-         <font>
-          <pointsize>12</pointsize>
-          <bold>false</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>0hz</string>
-        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="QLabel" name="lbl_PLR">
+           <property name="text">
+            <string>Polling Rate</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_PLRValue">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>0hz</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </widget>
      </item>
@@ -1922,36 +1928,36 @@
        <property name="flat">
         <bool>false</bool>
        </property>
-       <widget class="QLabel" name="lbl_DPI">
+       <widget class="QWidget" name="verticalLayoutWidget_2">
         <property name="geometry">
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>58</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>DPI</string>
-        </property>
-       </widget>
-       <widget class="QLabel" name="lbl_DPIvalue">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>20</y>
           <width>121</width>
-          <height>18</height>
+          <height>51</height>
          </rect>
         </property>
-        <property name="font">
-         <font>
-          <pointsize>12</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>0</string>
-        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <widget class="QLabel" name="lbl_DPI">
+           <property name="text">
+            <string>DPI</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_DPIvalue">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>0</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </widget>
      </item>
@@ -2432,36 +2438,36 @@
        <property name="flat">
         <bool>false</bool>
        </property>
-       <widget class="QLabel" name="lbl_RippleCTRL">
+       <widget class="QWidget" name="verticalLayoutWidget_5">
         <property name="geometry">
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>101</width>
-          <height>18</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Ripple Control</string>
-        </property>
-       </widget>
-       <widget class="QLabel" name="info_ripplectrlValue">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>20</y>
           <width>111</width>
-          <height>18</height>
+          <height>51</height>
          </rect>
         </property>
-        <property name="font">
-         <font>
-          <pointsize>12</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>DISABLED</string>
-        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_5">
+         <item>
+          <widget class="QLabel" name="lbl_RippleCTRL">
+           <property name="text">
+            <string>Ripple Control</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="info_ripplectrlValue">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>DISABLED</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </widget>
      </item>
