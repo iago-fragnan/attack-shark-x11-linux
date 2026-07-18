@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>752</width>
-    <height>393</height>
+    <width>750</width>
+    <height>400</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -21,14 +21,14 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>400</width>
-    <height>300</height>
+    <width>750</width>
+    <height>400</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>900</width>
-    <height>500</height>
+    <width>750</width>
+    <height>400</height>
    </size>
   </property>
   <property name="sizeIncrement">
@@ -53,22 +53,6 @@
    <enum>QTabWidget::TabShape::Rounded</enum>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QPushButton" name="btn_apply">
-    <property name="geometry">
-     <rect>
-      <x>390</x>
-      <y>240</y>
-      <width>321</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Apply all settings.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-    </property>
-    <property name="text">
-     <string>Apply</string>
-    </property>
-   </widget>
    <widget class="QLabel" name="lbl_image">
     <property name="geometry">
      <rect>
@@ -1451,7 +1435,7 @@
         </property>
         <property name="font">
          <font>
-          <pointsize>15</pointsize>
+          <pointsize>12</pointsize>
           <bold>false</bold>
          </font>
         </property>
@@ -1948,15 +1932,15 @@
          </rect>
         </property>
         <property name="text">
-         <string>DPI:</string>
+         <string>DPI</string>
         </property>
        </widget>
-       <widget class="QLabel" name="lbl_DPI_2">
+       <widget class="QLabel" name="lbl_DPIvalue">
         <property name="geometry">
          <rect>
           <x>0</x>
           <y>20</y>
-          <width>58</width>
+          <width>121</width>
           <height>18</height>
          </rect>
         </property>
@@ -2486,9 +2470,9 @@
    <widget class="QWidget" name="gridLayoutWidget_9">
     <property name="geometry">
      <rect>
-      <x>440</x>
-      <y>280</y>
-      <width>161</width>
+      <x>120</x>
+      <y>310</y>
+      <width>261</width>
       <height>81</height>
      </rect>
     </property>
@@ -2543,6 +2527,12 @@
      </item>
      <item row="1" column="1">
       <widget class="QPushButton" name="btn_refresh">
+       <property name="maximumSize">
+        <size>
+         <width>35</width>
+         <height>40</height>
+        </size>
+       </property>
        <property name="toolTip">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Refresh devices&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
@@ -2551,6 +2541,28 @@
        </property>
        <property name="icon">
         <iconset theme="QIcon::ThemeIcon::SystemReboot"/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="verticalLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>390</x>
+      <y>240</y>
+      <width>321</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QPushButton" name="btn_apply">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Apply all settings.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Apply</string>
        </property>
       </widget>
      </item>
