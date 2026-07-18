@@ -27,6 +27,7 @@ atsx11::atsx11(QWidget *parent)
     loadSettings();
     ui->lbl_batteryinfo->setEnabled(false);
     ui->pbar_batteryinfo->setEnabled(false);
+    ui->btn_apply->setEnabled(false);
 }
 
 atsx11::~atsx11()
@@ -152,8 +153,11 @@ void atsx11::on_cbox_devices_currentIndexChanged(int index)
     if (index < 0 || index >= devicesConnected.size()) {
         ui->lbl_batteryinfo->setEnabled(false);
         ui->pbar_batteryinfo->setEnabled(false);
+        ui->btn_apply->setEnabled(false);
         return;
     }
+
+    ui->btn_apply->setEnabled(true);
 
     if (m_batteryWatcher) {
         m_batteryWatcher->cancel();

@@ -25,36 +25,13 @@ protected:
 
 private slots:
     void on_btn_apply_clicked();
-
     void on_cbox_devices_currentIndexChanged(int index);
-
     void on_btn_refresh_clicked();
-
     void on_chbox_alldevices_stateChanged(int arg1);
-
-    void onBatteryInfoReady();
-
-    void on_horizontalSlider_sliderMoved(int position);
-
-    void on_checkBox_stateChanged(int arg1);
-
-    void on_sld_keyreptime_valueChanged(int value);
-
-    void on_sld_keyreptime_actionTriggered(int action);
-
-    void on_sld_keyreptime_sliderMoved(int position);
-
-    void on_sld_keyreptime_rangeChanged(int min, int max);
-
-    void on_horizontalSlider_valueChanged(int value);
-
     void on_sld_keyresptime_sliderMoved(int position);
-
     void on_sldr_sleeptime_sliderMoved(int position);
-
     void on_sldr_deepSleepTime_sliderMoved(int position);
-
-    void on_chbox_anglesnap_stateChanged(int arg1);
+    void onBatteryInfoReady();
 
 private:
     void populateDevices(bool allDevices);
