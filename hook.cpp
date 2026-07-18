@@ -189,7 +189,9 @@ QList<QPair<QString, QString>> getDevices(bool allDevices)
     return devices;
 }
 
-int setConfig(QString devicePath, int colorMode, int pollingRate)
+// https://github.com/HarukaYamamoto0/attack-shark-x11-driver/blob/main/docs/dpi-protocol.md
+// https://github.com/HarukaYamamoto0/attack-shark-x11-driver/blob/main/docs/polling-rate-protocol.md
+int applySettingsFromUser(const QString &devicePath, int colorMode, int pollingRate, bool angleSnap)
 {
     if (colorMode < 0 || colorMode >= 4 || pollingRate < 0 || pollingRate >= 4)
         return -1;
@@ -209,19 +211,44 @@ int setConfig(QString devicePath, int colorMode, int pollingRate)
     if (libusb_init(&ctx) != 0)
         return -2;
 
+    // Apply the polling rate
     const uint8_t pollingReport[9] = {
         0x06, 0x09, 0x01,
         POLLING_RATES[pollingRate][0],
         POLLING_RATES[pollingRate][1],
         0x00, 0x00, 0x00, 0x00,
     };
-
     const bool pollingOk = sendReport(ctx, device, 0x0306, pollingReport, sizeof(pollingReport));
     usleep(kReportDelayUs);
+
+    // Apply the LED color mode
     const bool colorOk = sendReport(ctx, device, 0x0305, COLOR_MODES[colorMode], sizeof(COLOR_MODES[colorMode]));
+    usleep(kReportDelayUs);
+
+    // Apply the angle snap setting
+    uint8_t dpiReport[56] = {
+        0x04, 0x38, 0x01,
+        angleSnap ? 0x01 : 0x00,
+        0x01,
+        0x3f, 0x00, 0x00,
+        0x01,
+        0x25, 0x38, 0x4b, 0x75, 0x8d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00,
+        0x02,
+        0xff, 0x00, 0x00, 0x00,
+        0xff, 0x00, 0x00, 0x00,
+        0xff, 0xff, 0xff, 0x00, 0x00,
+        0xff, 0xff, 0xff, 0x00,
+        0xff, 0xff, 0x40, 0x00,
+        0xff, 0xff, 0xff,
+        0x02, 0x0f,
+        0x34,
+        0x00, 0x00, 0x00, 0x00
+    };
+    const bool angleSnapOk = sendReport(ctx, device, 0x0304, dpiReport, sizeof(dpiReport));
 
     libusb_exit(ctx);
-    return pollingOk && colorOk ? 0 : -5;
+    return (pollingOk && colorOk && angleSnapOk) ? 0 : -5;
 }
 
 

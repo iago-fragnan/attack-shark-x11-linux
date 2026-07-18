@@ -12,10 +12,8 @@
 
 
 namespace {
-
 constexpr auto kSettingsOrg = "AttackShark";
 constexpr auto kSettingsApp = "X11";
-
 } // namespace
 
 
@@ -79,6 +77,9 @@ void atsx11::loadSettings()
         ui->cbox_colormodes->setCurrentIndex(colorMode);
     if (pollingRate >= 0 && pollingRate < ui->cbox_pollingrate->count())
         ui->cbox_pollingrate->setCurrentIndex(pollingRate);
+
+    const bool angleSnap = settings.value(QStringLiteral("angleSnap"), false).toBool();
+    ui->chbox_anglesnap->setChecked(angleSnap);
 }
 
 void atsx11::saveSettings()
@@ -88,6 +89,7 @@ void atsx11::saveSettings()
     settings.setValue(QStringLiteral("allDevices"), ui->chbox_alldevices->isChecked());
     settings.setValue(QStringLiteral("colorMode"), ui->cbox_colormodes->currentIndex());
     settings.setValue(QStringLiteral("pollingRate"), ui->cbox_pollingrate->currentIndex());
+    settings.setValue(QStringLiteral("angleSnap"), ui->chbox_anglesnap->isChecked());
 
     QString devicePath;
     const int index = ui->cbox_devices->currentIndex();
@@ -101,16 +103,22 @@ void atsx11::saveSettings()
 
 void atsx11::on_btn_apply_clicked()
 {
+    // Settings defualt
+    QString devicePath;
+    int color, prate = 0;
+    bool angleSnap = false;
+
+    // values from the UI
     QString device = ui->cbox_devices->currentText();
     if(device == ""){
         ui->lbl_debug->setText("<html><head/><body><p><span style='color:red;'>Error: device not found</span></p></body></html>");
         QMessageBox::warning(this, "Error", "Device not selected.");
         return;
     }
-    int color = ui->cbox_colormodes->currentIndex();
-    int prate = ui->cbox_pollingrate->currentIndex();
+    color = ui->cbox_colormodes->currentIndex();
+    prate = ui->cbox_pollingrate->currentIndex();
+    angleSnap = ui->chbox_anglesnap->isChecked();
 
-    QString devicePath;
     for (const auto& pair : devicesConnected) {
         if (QString("%1 (%2)").arg(pair.second).arg(pair.first) == device) {
             devicePath = pair.first;
@@ -124,12 +132,14 @@ void atsx11::on_btn_apply_clicked()
         return;
     }
 
-    const int result = setConfig(devicePath, color, prate);
+    const int result = applySettingsFromUser(devicePath, color, prate, angleSnap);
     if (result != 0) {
         ui->lbl_debug->setText("<html><head/><body><p><span style='color:red;'>Error: failed to apply settings</span></p></body></html>");
         QMessageBox::warning(this, "Error", "Failed to apply settings to the device (code " + QString::number(result) + ").");
         return;
     }
+
+
 
     saveSettings();
     ui->lbl_debug->setText("<html><head/><body><p><span style='color:green;'>Sucessfully applied</span></p></body></html>");
@@ -145,7 +155,6 @@ void atsx11::on_cbox_devices_currentIndexChanged(int index)
         return;
     }
 
-    // Cancel any in-flight battery read before starting a new one
     if (m_batteryWatcher) {
         m_batteryWatcher->cancel();
         m_batteryWatcher->waitForFinished();
@@ -211,11 +220,6 @@ void atsx11::on_chbox_alldevices_stateChanged(int arg1)
     }
 }
 
-void atsx11::on_checkBox_stateChanged(int arg1)
-{
-    ui->lbl_debug->setText("[DEBUG] Ripple Control: " + QString(arg1 != 0 ? "Enabled" : "Disabled"));
-}
-
 void atsx11::on_sld_keyresptime_sliderMoved(int position)
 {
     ui->lbl_kreptimeValueDisplay->setText(QString::number(position) + " ms");
@@ -231,3 +235,6 @@ void atsx11::on_sldr_sleeptime_sliderMoved(int position)
 {
     ui->lbl_sleepTimerValue->setText("Sleep Time: " + QString::number(position) + "min");
 }
+
+
+
