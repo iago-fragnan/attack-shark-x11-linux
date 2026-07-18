@@ -25,9 +25,6 @@ atsx11::atsx11(QWidget *parent)
     setWindowIcon(QIcon(QStringLiteral(":/images/mouse.png")));
     ui->btn_refresh->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
     loadSettings();
-    ui->lbl_batteryinfo->setEnabled(false);
-    ui->pbar_batteryinfo->setEnabled(false);
-    ui->btn_apply->setEnabled(false);
 }
 
 atsx11::~atsx11()
@@ -39,6 +36,13 @@ void atsx11::closeEvent(QCloseEvent *event)
 {
     saveSettings();
     QMainWindow::closeEvent(event);
+}
+
+void atsx11::updateInfoLabels()
+{
+    ui->lbl_PLRValue->setText(ui->cbox_pollingrate->currentText());
+    ui->lbl_infoLEDValue->setText(ui->cbox_colormodes->currentText());
+    ui->info_ripplectrlValue->setText(ui->chbox_rippleCTRL->isChecked() ? QStringLiteral("On") : QStringLiteral("Off"));
 }
 
 void atsx11::populateDevices(bool allDevices)
@@ -81,6 +85,11 @@ void atsx11::loadSettings()
 
     const bool angleSnap = settings.value(QStringLiteral("angleSnap"), false).toBool();
     ui->chbox_anglesnap->setChecked(angleSnap);
+
+    const bool rippleControl = settings.value(QStringLiteral("rippleControl"), false).toBool();
+    ui->chbox_rippleCTRL->setChecked(rippleControl);
+
+    updateInfoLabels();
 }
 
 void atsx11::saveSettings()
@@ -91,6 +100,7 @@ void atsx11::saveSettings()
     settings.setValue(QStringLiteral("colorMode"), ui->cbox_colormodes->currentIndex());
     settings.setValue(QStringLiteral("pollingRate"), ui->cbox_pollingrate->currentIndex());
     settings.setValue(QStringLiteral("angleSnap"), ui->chbox_anglesnap->isChecked());
+    settings.setValue(QStringLiteral("rippleControl"), ui->chbox_rippleCTRL->isChecked());
 
     QString devicePath;
     const int index = ui->cbox_devices->currentIndex();
@@ -119,6 +129,10 @@ void atsx11::on_btn_apply_clicked()
     color = ui->cbox_colormodes->currentIndex();
     prate = ui->cbox_pollingrate->currentIndex();
     angleSnap = ui->chbox_anglesnap->isChecked();
+    keyRespTime = ui->sld_keyresptime->value();
+    sleepTime = ui->sldr_sleeptime->value();
+    deepSleepTime = ui->sldr_deepSleepTime->value();
+    rippleControl = ui->chbox_rippleCTRL->isChecked();
 
     for (const auto& pair : devicesConnected) {
         if (QString("%1 (%2)").arg(pair.second).arg(pair.first) == device) {
@@ -133,16 +147,15 @@ void atsx11::on_btn_apply_clicked()
         return;
     }
 
-    const int result = applySettingsFromUser(devicePath, color, prate, angleSnap);
+    const int result = applySettingsFromUser(devicePath, color, prate, angleSnap, keyRespTime, sleepTime, deepSleepTime, rippleControl);
     if (result != 0) {
         ui->lbl_debug->setText("<html><head/><body><p><span style='color:red;'>Error: failed to apply settings</span></p></body></html>");
         QMessageBox::warning(this, "Error", "Failed to apply settings to the device (code " + QString::number(result) + ").");
         return;
     }
 
-
-
     saveSettings();
+    updateInfoLabels();
     ui->lbl_debug->setText("<html><head/><body><p><span style='color:green;'>Sucessfully applied</span></p></body></html>");
     QMessageBox::information(this, "Success", "Settings applied to " + devicePath + ".");
 }

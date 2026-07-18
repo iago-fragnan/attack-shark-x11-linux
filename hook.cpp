@@ -191,7 +191,15 @@ QList<QPair<QString, QString>> getDevices(bool allDevices)
 
 // https://github.com/HarukaYamamoto0/attack-shark-x11-driver/blob/main/docs/dpi-protocol.md
 // https://github.com/HarukaYamamoto0/attack-shark-x11-driver/blob/main/docs/polling-rate-protocol.md
-int applySettingsFromUser(const QString &devicePath, int colorMode, int pollingRate, bool angleSnap)
+int applySettingsFromUser(
+    const QString &devicePath,
+    int colorMode,
+    int pollingRate,
+    bool angleSnap,
+    int keyRespTime,
+    int sleepTime,
+    int deepSleepTime,
+    bool rippleControl)
 {
     if (colorMode < 0 || colorMode >= 4 || pollingRate < 0 || pollingRate >= 4)
         return -1;
@@ -228,8 +236,8 @@ int applySettingsFromUser(const QString &devicePath, int colorMode, int pollingR
     // Apply the angle snap setting
     uint8_t dpiReport[56] = {
         0x04, 0x38, 0x01,
-        angleSnap ? 0x01 : 0x00,
-        0x01,
+        angleSnap ? 0x01 : 0x00,      // offset 3: Angle Snap
+        rippleControl ? 0x01 : 0x00,  // offset 4: Ripple Control
         0x3f, 0x00, 0x00,
         0x01,
         0x25, 0x38, 0x4b, 0x75, 0x8d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
