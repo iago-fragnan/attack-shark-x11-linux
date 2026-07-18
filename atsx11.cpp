@@ -106,8 +106,8 @@ void atsx11::on_btn_apply_clicked()
 {
     // Settings defualt
     QString devicePath;
-    int color, prate = 0;
-    bool angleSnap = false;
+    int color, prate, keyRespTime = 0;
+    bool angleSnap, rippleControl = false;
 
     // values from the UI
     QString device = ui->cbox_devices->currentText();

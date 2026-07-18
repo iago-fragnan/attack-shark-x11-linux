@@ -163,7 +163,7 @@
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Polling rate of the mouse, frequency of update, Higher more precisely but more battery drainage.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
-        <string>Sleep Time: 0.5min</string>
+        <string>Sleep Time: 1min</string>
        </property>
       </widget>
      </item>
@@ -214,7 +214,7 @@
       <x>540</x>
       <y>90</y>
       <width>171</width>
-      <height>65</height>
+      <height>61</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_3">
@@ -256,7 +256,7 @@
       <x>390</x>
       <y>90</y>
       <width>141</width>
-      <height>51</height>
+      <height>61</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_4">
@@ -282,7 +282,7 @@
       <x>390</x>
       <y>160</y>
       <width>141</width>
-      <height>49</height>
+      <height>51</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_5">
@@ -2550,9 +2550,9 @@
     <property name="geometry">
      <rect>
       <x>390</x>
-      <y>240</y>
+      <y>230</y>
       <width>321</width>
-      <height>51</height>
+      <height>61</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
