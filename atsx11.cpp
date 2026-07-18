@@ -106,7 +106,7 @@ void atsx11::on_btn_apply_clicked()
 {
     // Settings defualt
     QString devicePath;
-    int color, prate, keyRespTime = 0;
+    int color, prate, keyRespTime, sleepTime, deepSleepTime = 0;
     bool angleSnap, rippleControl = false;
 
     // values from the UI
