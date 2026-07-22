@@ -37,6 +37,31 @@ const uint8_t COLOR_MODES[4][15] = {
     {0x05, 0x0F, 0x01, 0x40, 0x01, 0xA8, 0x00, 0x00, 0xFF, 0x01, 0x06, 0x01, 0xEF, 0x00, 0x00},
 };
 
+void buildColorReport(int colorMode, int sleepTime, int deepSleepTime, int keyRespTime, uint8_t out[15])
+{
+    std::memcpy(out, COLOR_MODES[colorMode], 15);
+    
+    out[2] = 0x01;
+
+    uint8_t hardwareSpeed = out[4] & 0x0F;
+    if (hardwareSpeed == 0) {
+        hardwareSpeed = 0x01;
+    }
+    int bucket = (deepSleepTime - 1) / 16;
+    out[4] = static_cast<uint8_t>((bucket << 4) | hardwareSpeed);
+
+    out[5] = static_cast<uint8_t>(0x08 + (deepSleepTime * 0x10));
+
+    out[9] = static_cast<uint8_t>(sleepTime * 2);
+
+    out[10] = static_cast<uint8_t>(((keyRespTime - 4) / 2) + 2);
+
+    uint8_t checksum = 0;
+    for (int i = 3; i <= 10; ++i)
+        checksum = static_cast<uint8_t>(checksum + out[i]);
+    out[12] = checksum;
+}
+
 struct udev_device *usbParent(struct udev_device *dev)
 {
     while (dev) {
@@ -189,8 +214,62 @@ QList<QPair<QString, QString>> getDevices(bool allDevices)
     return devices;
 }
 
-// https://github.com/HarukaYamamoto0/attack-shark-x11-driver/blob/main/docs/dpi-protocol.md
-// https://github.com/HarukaYamamoto0/attack-shark-x11-driver/blob/main/docs/polling-rate-protocol.md
+//   0x1d57:0xfa60  Xenta 2.4G Wireless Device  (wireless dongle)
+//   0x1d57:0xfa55  Xenta USB Gaming Mouse       (wired / charging)
+static constexpr uint16_t kX11Vid          = 0x1d57;
+static constexpr uint16_t kX11PidWireless  = 0xfa60;
+static constexpr uint16_t kX11PidWired     = 0xfa55;
+
+QString findAttackSharkDevice()
+{
+    struct udev *udev = udev_new();
+    if (!udev)
+        return {};
+
+    struct udev_enumerate *enumerate = udev_enumerate_new(udev);
+    udev_enumerate_add_match_subsystem(enumerate, "input");
+    udev_enumerate_scan_devices(enumerate);
+
+    QString wirelessMatch;
+    QString wiredMatch;
+
+    struct udev_list_entry *entry;
+    udev_list_entry_foreach(entry, udev_enumerate_get_list_entry(enumerate)) {
+        struct udev_device *dev = udev_device_new_from_syspath(udev, udev_list_entry_get_name(entry));
+        if (!dev)
+            continue;
+
+        const char *devnode = udev_device_get_devnode(dev);
+        if (!devnode || !QString::fromUtf8(devnode).startsWith(QStringLiteral("/dev/input/mouse"))) {
+            udev_device_unref(dev);
+            continue;
+        }
+
+        struct udev_device *usb = usbParent(dev);
+        if (usb) {
+            const char *vidStr = udev_device_get_sysattr_value(usb, "idVendor");
+            const char *pidStr = udev_device_get_sysattr_value(usb, "idProduct");
+            if (vidStr && pidStr) {
+                const uint16_t vid = static_cast<uint16_t>(QString::fromUtf8(vidStr).toUInt(nullptr, 16));
+                const uint16_t pid = static_cast<uint16_t>(QString::fromUtf8(pidStr).toUInt(nullptr, 16));
+                if (vid == kX11Vid) {
+                    if (pid == kX11PidWireless && wirelessMatch.isEmpty())
+                        wirelessMatch = QString::fromUtf8(devnode);
+                    else if (pid == kX11PidWired && wiredMatch.isEmpty())
+                        wiredMatch = QString::fromUtf8(devnode);
+                }
+            }
+        }
+
+        udev_device_unref(dev);
+    }
+
+    udev_enumerate_unref(enumerate);
+    udev_unref(udev);
+
+    return wirelessMatch.isEmpty() ? wiredMatch : wirelessMatch;
+}
+
 int applySettingsFromUser(
     const QString &devicePath,
     int colorMode,
@@ -202,6 +281,12 @@ int applySettingsFromUser(
     bool rippleControl)
 {
     if (colorMode < 0 || colorMode >= 4 || pollingRate < 0 || pollingRate >= 4)
+        return -1;
+    if (sleepTime < 1 || sleepTime > 30)
+        return -1;
+    if (deepSleepTime < 1 || deepSleepTime > 60)
+        return -1;
+    if (keyRespTime < 4 || keyRespTime > 50 || keyRespTime % 2 != 0)
         return -1;
 
     struct udev *udev = udev_new();
@@ -229,8 +314,10 @@ int applySettingsFromUser(
     const bool pollingOk = sendReport(ctx, device, 0x0306, pollingReport, sizeof(pollingReport));
     usleep(kReportDelayUs);
 
-    // Apply the LED color mode
-    const bool colorOk = sendReport(ctx, device, 0x0305, COLOR_MODES[colorMode], sizeof(COLOR_MODES[colorMode]));
+    // Apply the LED color mode (with sleep timer, deep sleep timer, and debounce/key response time embedded)
+    uint8_t colorReport[15];
+    buildColorReport(colorMode, sleepTime, deepSleepTime, keyRespTime, colorReport);
+    const bool colorOk = sendReport(ctx, device, 0x0305, colorReport, sizeof(colorReport));
     usleep(kReportDelayUs);
 
     // Apply the angle snap setting
@@ -291,7 +378,7 @@ int getBatteryInfo(const QString &devicePath)
         return -1;
     }
 
-    int battery = -1;
+    int battery = -1; // -1 = error, -2 = charging (interface up but no wireless data)
 
     bool driverWasAttached = false;
     if (libusb_kernel_driver_active(handle, kBatteryIface) == 1) {
@@ -311,6 +398,10 @@ int getBatteryInfo(const QString &devicePath)
         libusb_exit(ctx);
         return -1;
     }
+
+    bool ifaceClaimed = true;
+    (void)ifaceClaimed;
+
     constexpr int kMaxRetries = 5;
     for (int attempt = 0; attempt < kMaxRetries && battery < 0; ++attempt) {
         uint8_t buf[kBufSize] = {};
@@ -335,6 +426,9 @@ int getBatteryInfo(const QString &devicePath)
             battery = static_cast<int>(buf[4]);
         }
     }
+
+    if (battery < 0)
+        battery = -2;
 
     libusb_release_interface(handle, kBatteryIface);
     if (driverWasAttached)
