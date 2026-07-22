@@ -25,14 +25,20 @@ soon, but you can build it for yourself
 - [x] Apply User-Selected Settings
 - [x] Battery Percentage Monitoring
 - [x] Display Current Applied Settings on Startup
-- [ ] Battery Charging Indicator
-- [ ] Power Management & Standby Control
-- [ ] Key Response Time
+- [x] Battery Charging Indicator
+- [x] Power Management & Standby Control
+- [x] Key Response Time
 - [x] Ripple Control
 - [x] Angle Snapping
 - [ ] Macro Support
 - [ ] Minimize to System Tray
 - [ ] Auto startup
 - [ ] Profiles
-- [ ] Automatic Device Selection
+- [x] Automatic Device Selection
 - [ ] Custom window for manual selection device
+
+## CREDITS
+
+- Lightining Icon from [Flaticon](https://www.flaticon.com/free-icon/flash_252851?term=lightning&related_id=252851)
+
+- Additional reverse engineering for attack shark x11 mouse: [HarukaYamamoto0](https://github.com/HarukaYamamoto0/attack-shark-x11-driver/)

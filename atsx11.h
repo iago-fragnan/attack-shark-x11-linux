@@ -33,6 +33,8 @@ private slots:
     void on_sldr_deepSleepTime_sliderMoved(int position);
     void onBatteryInfoReady();
 
+    void on_debug_reset_clicked();
+
 private:
     void populateDevices(bool allDevices);
     void loadSettings();
