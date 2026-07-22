@@ -298,14 +298,3 @@ void atsx11::on_sldr_sleeptime_sliderMoved(int position)
 }
 
 
-void atsx11::on_debug_reset_clicked()
-{
-    QSettings settings(kSettingsOrg, kSettingsApp);
-    settings.clear();
-    settings.sync();
-
-    loadSettings();
-
-    ui->lbl_debug->setText(QStringLiteral("Settings reset to defaults."));
-}
-
