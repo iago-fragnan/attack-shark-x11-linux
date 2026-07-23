@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=Attack Shark X11
-Comment=Attack Shark mouse configuration utility
+Comment=Custom native control panel for mouse Attack Shark X11
 Exec=attackshark-x11
 Icon=attackshark-x11
 Terminal=false
-Categories=Settings;
+Categories=Settings;Utility;

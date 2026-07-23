@@ -1,4 +1,4 @@
-<img width="573" height="340" alt="software-ui" src="https://github.com/user-attachments/assets/8874fbe5-c65d-4a3c-bd95-2fb9897e1c3b" />
+<img width="722" height="380" alt="Screenshot DEMO" src="https://github.com/user-attachments/assets/242df54c-0cb7-4bb3-a49a-8738981876f3" />
 
 
 ## Attack Shark X11 Software GUI for Linux
@@ -25,12 +25,20 @@ soon, but you can build it for yourself
 - [x] Apply User-Selected Settings
 - [x] Battery Percentage Monitoring
 - [x] Display Current Applied Settings on Startup
-- [ ] Battery Charging Indicator
-- [ ] Power Management & Standby Control
-- [ ] Key Response Time
-- [ ] Ripple Control
-- [ ] Angle Snapping
-- [ ] Macro Support
-- [ ] Minimize to System Tray
-- [ ] Auto startup
-- [ ] Profiles
+- [x] Battery Charging Indicator
+- [x] Power Management & Standby Control
+- [x] Key Response Time
+- [x] Ripple Control
+- [x] Angle Snapping
+- [x] Automatic Device Selection
+- [ ] Custom window for settings (Device Selection, Auto Startup, Profiles, Always minimize to System Tray)
+    - [ ] Macro Support
+    - [ ] Minimize to System Tray
+    - [ ] Profiles
+
+
+## CREDITS
+
+- Lightining Icon from [Flaticon](https://www.flaticon.com/free-icon/flash_252851?term=lightning&related_id=252851)
+
+- Additional reverse engineering from [HarukaYamamoto0](https://github.com/HarukaYamamoto0/attack-shark-x11-driver/)
