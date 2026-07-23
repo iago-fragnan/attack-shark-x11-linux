@@ -284,7 +284,6 @@ void atsx11::on_chbox_alldevices_stateChanged(int arg1)
 void atsx11::on_sld_keyresptime_sliderMoved(int position)
 {
     ui->lbl_kreptimeValueDisplay->setText(QString::number(position) + " ms");
-    ui->lbl_debug->setText("[DEBUG] Ripple Speed: " + QString::number(position));
 }
 
 void atsx11::on_sldr_deepSleepTime_sliderMoved(int position)
