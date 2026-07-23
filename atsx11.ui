@@ -56,13 +56,8 @@
    <widget class="QLabel" name="lbl_image">
     <property name="geometry">
      <rect>
-<<<<<<< HEAD
-      <x>50</x>
-      <y>-10</y>
-=======
       <x>30</x>
       <y>0</y>
->>>>>>> 70bf594 (fix: remove debug text and ui layout grid more compact)
       <width>141</width>
       <height>271</height>
      </rect>
@@ -409,92 +404,6 @@
      </item>
     </layout>
    </widget>
-<<<<<<< HEAD
-   <widget class="QWidget" name="gridLayoutWidget_7">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>330</y>
-      <width>141</width>
-      <height>52</height>
-     </rect>
-    </property>
-    <layout class="QGridLayout" name="gridLayout_7">
-     <item row="2" column="0">
-      <widget class="QProgressBar" name="pbar_batteryinfo">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="autoFillBackground">
-        <bool>false</bool>
-       </property>
-       <property name="minimum">
-        <number>-1</number>
-       </property>
-       <property name="value">
-        <number>0</number>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
-       </property>
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-       <property name="invertedAppearance">
-        <bool>false</bool>
-       </property>
-       <property name="textDirection">
-        <enum>QProgressBar::Direction::BottomToTop</enum>
-       </property>
-       <property name="format">
-        <string notr="true">%p%</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="lbl_batteryinfo">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Battery percentage of the mouse.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Battery</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QLabel" name="lbl_isCharging">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="font">
-        <font>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="toolTip">
-        <string>Charging Indicator</string>
-       </property>
-       <property name="toolTipDuration">
-        <number>5</number>
-       </property>
-       <property name="frameShape">
-        <enum>QFrame::Shape::NoFrame</enum>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="pixmap">
-        <pixmap resource="mouse_model_display.qrc">:/images/Downloads/lightning_rsz.png</pixmap>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-=======
->>>>>>> 70bf594 (fix: remove debug text and ui layout grid more compact)
    <widget class="QWidget" name="gridLayoutWidget_8">
     <property name="geometry">
      <rect>
@@ -2575,88 +2484,6 @@
      </item>
     </layout>
    </widget>
-<<<<<<< HEAD
-   <widget class="QWidget" name="gridLayoutWidget_9">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>250</y>
-      <width>201</width>
-      <height>81</height>
-     </rect>
-    </property>
-    <layout class="QGridLayout" name="gridLayout_9">
-     <item row="1" column="0">
-      <widget class="QComboBox" name="cbox_devices">
-       <property name="currentText">
-        <string/>
-       </property>
-       <property name="currentIndex">
-        <number>-1</number>
-       </property>
-       <property name="placeholderText">
-        <string>Select Device</string>
-       </property>
-       <property name="frame">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QPushButton" name="btn_refresh">
-       <property name="maximumSize">
-        <size>
-         <width>35</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Refresh devices&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset theme="QIcon::ThemeIcon::SystemReboot"/>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QCheckBox" name="chbox_alldevices">
-       <property name="acceptDrops">
-        <bool>true</bool>
-       </property>
-       <property name="toolTip">
-        <string notr="true" comment="If your device doesnt show up, enable it and search it." extracomment="If your device doesnt show up, enable it and search it.">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If your device doesnt show up, enable this.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="statusTip">
-        <string notr="true" comment="If your device doesnt show up, enable it and search it." extracomment="If your device doesnt show up, enable it and search it."/>
-       </property>
-       <property name="whatsThis">
-        <string notr="true" comment="If your device doesnt show up, enable it and search it." extracomment="If your device doesnt show up, enable it and search it."/>
-       </property>
-       <property name="text">
-        <string>All devices</string>
-       </property>
-       <property name="tristate">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="lbl_device">
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the device name or the 2.4ghz receptor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Device:</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-=======
->>>>>>> 70bf594 (fix: remove debug text and ui layout grid more compact)
    <widget class="QWidget" name="verticalLayoutWidget">
     <property name="geometry">
      <rect>
