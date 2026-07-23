@@ -22,7 +22,7 @@ atsx11::atsx11(QWidget *parent)
     , ui(new Ui::atsx11)
 {
     ui->setupUi(this);
-    setWindowIcon(QIcon(QStringLiteral(":/images/mouse.png")));
+    setWindowIcon(QIcon(QStringLiteral(":/images/assets/mouse.png")));
     ui->btn_refresh->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
     ui->lbl_isCharging->setPixmap(QPixmap());
     loadSettings();
@@ -239,7 +239,7 @@ void atsx11::onBatteryInfoReady()
 
     if (battery == -2) {
         ui->lbl_isCharging->setEnabled(true);
-        ui->lbl_isCharging->setPixmap(QPixmap(":/images/Downloads/lightning_rsz.png"));
+        ui->lbl_isCharging->setPixmap(QPixmap(":/images/assets/lightning.png"));
         ui->lbl_debug->setText(QStringLiteral("Mouse is charging"));
         ui->pbar_batteryinfo->setValue(0);
     } else if (battery < 0) {

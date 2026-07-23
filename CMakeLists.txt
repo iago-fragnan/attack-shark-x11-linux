@@ -23,7 +23,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(attackshark-x11
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        mouse.png
+        assets/mouse-2.png
         mouse_model_display.qrc
         hook.h hook.cpp
 

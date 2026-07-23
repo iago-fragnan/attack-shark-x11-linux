@@ -1,8 +1,8 @@
 <RCC>
     <qresource prefix="/images">
-        <file>mouse.png</file>
-        <file>mouse-2.png</file>
-        <file>../../Downloads/lightning_rsz.png</file>
+        <file>assets/mouse.png</file>
+        <file>assets/mouse-2.png</file>
+        <file>assets/lightning.png</file>
     </qresource>
     <qresource prefix="/"/>
 </RCC>
