@@ -12,9 +12,12 @@ This software is for the mouse [Attack Shark X11](https://attackshark.com/produc
 paru -S attackshark-x11 # you can also use yay
 ```
 
-**Debian:**
-
-soon, but you can build it for yourself
+**Debian/Ubuntu:**
+```sh
+sudo apt-get install -y wget git cmake build-essential pkg-config libudev-dev libusb-1.0-0-dev qt6-base-dev
+wget https://github.com/iago-fragnan/attack-shark-x11-linux/releases/download/v2.0.1/attackshark-x11-v2.0.1.deb
+sudo dpkg -i attackshark-x11.deb
+```
 
 
 ## TODO
