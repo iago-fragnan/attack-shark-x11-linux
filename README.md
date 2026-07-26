@@ -31,10 +31,12 @@ soon, but you can build it for yourself
 - [x] Ripple Control
 - [x] Angle Snapping
 - [x] Automatic Device Selection
-- [ ] Custom window for settings (Device Selection, Auto Startup, Profiles, Always minimize to System Tray)
+- [ ] Custom window for settings
     - [ ] Macro Support
     - [ ] Minimize to System Tray
     - [ ] Profiles
+    - [ ] Device selection
+    - [ ] Auto Startup
 
 
 ## CREDITS
