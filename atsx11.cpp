@@ -7,6 +7,7 @@
 #include <QStyle>
 #include <QtConcurrent/QtConcurrent>
 #include "hook.h"
+#include "settings.h"
 
 #include <algorithm>
 
@@ -297,3 +298,10 @@ void atsx11::on_sldr_sleeptime_sliderMoved(int position)
 }
 
 
+
+void atsx11::on_btn_settings_clicked()
+{
+    if (!m_settings)
+        m_settings = new settings(this);
+    m_settings->show();
+}

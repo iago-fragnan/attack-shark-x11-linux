@@ -5,6 +5,7 @@
 #include <QFutureWatcher>
 
 class QCloseEvent;
+class settings;
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -33,6 +34,8 @@ private slots:
     void on_sldr_deepSleepTime_sliderMoved(int position);
     void onBatteryInfoReady();
 
+    void on_btn_settings_clicked();
+
 private:
     void populateDevices(bool allDevices);
     void loadSettings();
@@ -42,5 +45,6 @@ private:
     Ui::atsx11 *ui;
     QList<QPair<QString, QString>> devicesConnected;
     QFutureWatcher<int> *m_batteryWatcher = nullptr;
+    settings *m_settings = nullptr;
 };
 #endif // ATSX11_H
