@@ -34,11 +34,14 @@ sudo dpkg -i attackshark-x11.deb
 - [x] Ripple Control
 - [x] Angle Snapping
 - [x] Automatic Device Selection
-- [ ] Custom window for settings
+- [x] Custom window for settings
     - [ ] Macro Support
     - [ ] Minimize to System Tray
-    - [ ] Profiles
-    - [ ] Device selection
+    - [x] Profiles
+        - [x] Apply
+        - [ ] Save
+        - [ ] Load
+    - [x] Device selection
     - [ ] Auto Startup
 
 

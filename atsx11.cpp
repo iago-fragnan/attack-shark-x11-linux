@@ -9,8 +9,6 @@
 #include "hook.h"
 #include "settings.h"
 
-#include <algorithm>
-
 
 namespace {
 constexpr auto kSettingsOrg = "AttackShark";
@@ -24,8 +22,15 @@ atsx11::atsx11(QWidget *parent)
 {
     ui->setupUi(this);
     setWindowIcon(QIcon(QStringLiteral(":/images/assets/mouse.png")));
-    ui->btn_refresh->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+    ui->btn_settings->setIcon(QIcon());
+    ui->btn_settings->setText(QStringLiteral("\u2699"));
     ui->lbl_isCharging->setPixmap(QPixmap());
+
+    ui->lbl_batteryinfo->setEnabled(false);
+    ui->pbar_batteryinfo->setEnabled(false);
+    ui->lbl_isCharging->setEnabled(false);
+    ui->btn_apply->setEnabled(false);
+
     loadSettings();
 }
 
@@ -46,167 +51,18 @@ void atsx11::updateInfoLabels()
     ui->lbl_infoLEDValue->setText(ui->cbox_colormodes->currentText());
     ui->info_ripplectrlValue->setText(ui->chbox_rippleCTRL->isChecked() ? QStringLiteral("On") : QStringLiteral("Off"));
     ui->lbl_activeAngleSnapValue->setText(ui->chbox_anglesnap->isChecked() ? QStringLiteral("On") : QStringLiteral("Off"));
-    
 }
 
-void atsx11::populateDevices(bool allDevices)
+void atsx11::loadDeviceAndBattery(const QString &devicePath)
 {
-    ui->cbox_devices->clear();
-    devicesConnected = getDevices(allDevices);
-    for (const auto &device : devicesConnected) {
-        ui->cbox_devices->addItem(QString("%1 (%2)").arg(device.second).arg(device.first));
-    }
-}
-
-void atsx11::loadSettings()
-{
-    QSettings settings(kSettingsOrg, kSettingsApp);
-
-    const bool allDevices = settings.value(QStringLiteral("allDevices"), false).toBool();
-    const int colorMode = settings.value(QStringLiteral("colorMode"), 0).toInt();
-    const int pollingRate = settings.value(QStringLiteral("pollingRate"), 0).toInt();
-    const QString devicePath = settings.value(QStringLiteral("devicePath")).toString();
-
-    ui->chbox_alldevices->blockSignals(true);
-    ui->chbox_alldevices->setChecked(allDevices);
-    ui->chbox_alldevices->blockSignals(false);
-
-    populateDevices(allDevices);
-
-    bool deviceSelected = false;
-    if (!devicePath.isEmpty()) {
-        for (int i = 0; i < devicesConnected.size(); ++i) {
-            if (devicesConnected[i].first == devicePath) {
-                ui->cbox_devices->setCurrentIndex(i);
-                deviceSelected = true;
-                break;
-            }
-        }
-    }
-
-    //    USB VID/PID (0x1d57:0xfa60 wireless, 0x1d57:0xfa55 wired/charging)
-    if (!deviceSelected) {
-        const QString autoPath = findAttackSharkDevice();
-        if (!autoPath.isEmpty()) {
-            for (int i = 0; i < devicesConnected.size(); ++i) {
-                if (devicesConnected[i].first == autoPath) {
-                    ui->cbox_devices->setCurrentIndex(i);
-                    deviceSelected = true;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (colorMode >= 0 && colorMode < ui->cbox_colormodes->count())
-        ui->cbox_colormodes->setCurrentIndex(colorMode);
-    if (pollingRate >= 0 && pollingRate < ui->cbox_pollingrate->count())
-        ui->cbox_pollingrate->setCurrentIndex(pollingRate);
-
-    const bool angleSnap = settings.value(QStringLiteral("angleSnap"), false).toBool();
-    ui->chbox_anglesnap->setChecked(angleSnap);
-
-    const bool rippleControl = settings.value(QStringLiteral("rippleControl"), false).toBool();
-    ui->chbox_rippleCTRL->setChecked(rippleControl);
-
-    const int sleepTime = settings.value(QStringLiteral("sleepTime"), 5).toInt();
-    ui->sldr_sleeptime->setValue(sleepTime);
-    ui->lbl_sleepTimerValue->setText(QStringLiteral("Sleep Time: ") + QString::number(sleepTime) + QStringLiteral("min"));
-
-    const int deepSleepTime = settings.value(QStringLiteral("deepSleepTime"), 10).toInt();
-    ui->sldr_deepSleepTime->setValue(deepSleepTime);
-    ui->lbl_deepsleeptimeValue->setText(QStringLiteral("Deep Sleep Time: ") + QString::number(deepSleepTime) + QStringLiteral("min"));
-
-    const int keyRespTime = settings.value(QStringLiteral("keyRespTime"), 8).toInt();
-    ui->sld_keyresptime->setValue(keyRespTime);
-    ui->lbl_kreptimeValueDisplay->setText(QString::number(keyRespTime) + QStringLiteral(" ms"));
-
-    updateInfoLabels();
-}
-
-void atsx11::saveSettings()
-{
-    QSettings settings(kSettingsOrg, kSettingsApp);
-
-    settings.setValue(QStringLiteral("allDevices"), ui->chbox_alldevices->isChecked());
-    settings.setValue(QStringLiteral("colorMode"), ui->cbox_colormodes->currentIndex());
-    settings.setValue(QStringLiteral("pollingRate"), ui->cbox_pollingrate->currentIndex());
-    settings.setValue(QStringLiteral("angleSnap"), ui->chbox_anglesnap->isChecked());
-    settings.setValue(QStringLiteral("rippleControl"), ui->chbox_rippleCTRL->isChecked());
-    settings.setValue(QStringLiteral("sleepTime"), ui->sldr_sleeptime->value());
-    settings.setValue(QStringLiteral("deepSleepTime"), ui->sldr_deepSleepTime->value());
-    settings.setValue(QStringLiteral("keyRespTime"), ui->sld_keyresptime->value());
-
-    QString devicePath;
-    const int index = ui->cbox_devices->currentIndex();
-    if (index >= 0 && index < devicesConnected.size())
-        devicePath = devicesConnected[index].first;
-
-    settings.setValue(QStringLiteral("devicePath"), devicePath);
-    settings.sync();
-}
-
-
-void atsx11::on_btn_apply_clicked()
-{
-    // Settings defualt
-    QString devicePath;
-    int color, prate, keyRespTime, sleepTime, deepSleepTime = 0;
-    bool angleSnap, rippleControl = false;
-
-    // values from the UI
-    QString device = ui->cbox_devices->currentText();
-    if(device == ""){
-        ui->lbl_debug->setText("<html><head/><body><p><span style='color:red;'>Error: device not found</span></p></body></html>");
-        QMessageBox::warning(this, "Error", "Device not selected.");
-        return;
-    }
-    color = ui->cbox_colormodes->currentIndex();
-    prate = ui->cbox_pollingrate->currentIndex();
-    angleSnap = ui->chbox_anglesnap->isChecked();
-    keyRespTime = ui->sld_keyresptime->value();
-    sleepTime = ui->sldr_sleeptime->value();
-    deepSleepTime = ui->sldr_deepSleepTime->value();
-    rippleControl = ui->chbox_rippleCTRL->isChecked();
-
-    for (const auto& pair : devicesConnected) {
-        if (QString("%1 (%2)").arg(pair.second).arg(pair.first) == device) {
-            devicePath = pair.first;
-            break;
-        }
-    }
-
-    if (devicePath.isEmpty()) {
-        ui->lbl_debug->setText("<html><head/><body><p><span style='color:red;'>Error: device not found</span></p></body></html>");
-        QMessageBox::warning(this, "Error", "Device not found in the connected list.");
-        return;
-    }
-
-    const int result = applySettingsFromUser(devicePath, color, prate, angleSnap, keyRespTime, sleepTime, deepSleepTime, rippleControl);
-    if (result != 0) {
-        ui->lbl_debug->setText("<html><head/><body><p><span style='color:red;'>Error: failed to apply settings</span></p></body></html>");
-        QMessageBox::warning(this, "Error", "Failed to apply settings to the device (code " + QString::number(result) + ").");
-        return;
-    }
-
-    saveSettings();
-    updateInfoLabels();
-    ui->lbl_debug->setText("<html><head/><body><p><span style='color:green;'>Sucessfully applied</span></p></body></html>");
-    QMessageBox::information(this, "Success", "Settings applied to " + devicePath + ".");
-}
-
-
-void atsx11::on_cbox_devices_currentIndexChanged(int index)
-{
-    if (index < 0 || index >= devicesConnected.size()) {
-        ui->lbl_batteryinfo->setEnabled(false);
-        ui->pbar_batteryinfo->setEnabled(false);
-        ui->lbl_isCharging->setEnabled(false);
-        ui->btn_apply->setEnabled(false);
-        return;
-    }
+    m_currentDevicePath = devicePath;
 
     ui->btn_apply->setEnabled(true);
+    ui->lbl_batteryinfo->setEnabled(true);
+    ui->pbar_batteryinfo->setEnabled(true);
+    ui->pbar_batteryinfo->setValue(0);
+    ui->lbl_isCharging->setEnabled(false);
+    ui->lbl_debug->setText(QStringLiteral("Reading battery\u2026"));
 
     if (m_batteryWatcher) {
         m_batteryWatcher->cancel();
@@ -215,18 +71,91 @@ void atsx11::on_cbox_devices_currentIndexChanged(int index)
         m_batteryWatcher = nullptr;
     }
 
-    const QString devicePath = devicesConnected[index].first;
-    ui->lbl_debug->setText(QStringLiteral("Reading battery\u2026"));
-    ui->lbl_batteryinfo->setEnabled(true);
-    ui->pbar_batteryinfo->setEnabled(true);
-    ui->pbar_batteryinfo->setValue(0);
-    ui->lbl_isCharging->setEnabled(false); 
-
     m_batteryWatcher = new QFutureWatcher<int>(this);
     connect(m_batteryWatcher, &QFutureWatcher<int>::finished,
             this, &atsx11::onBatteryInfoReady);
     m_batteryWatcher->setFuture(
         QtConcurrent::run([devicePath]() { return getBatteryInfo(devicePath); }));
+}
+
+void atsx11::loadSettings()
+{
+    QSettings qSettings(kSettingsOrg, kSettingsApp);
+
+    const int colorMode    = qSettings.value(QStringLiteral("colorMode"), 0).toInt();
+    const int pollingRate  = qSettings.value(QStringLiteral("pollingRate"), 0).toInt();
+    const bool angleSnap   = qSettings.value(QStringLiteral("angleSnap"), false).toBool();
+    const bool rippleCtrl  = qSettings.value(QStringLiteral("rippleControl"), false).toBool();
+    const int sleepTime    = qSettings.value(QStringLiteral("sleepTime"), 5).toInt();
+    const int deepSleep    = qSettings.value(QStringLiteral("deepSleepTime"), 10).toInt();
+    const int keyRespTime  = qSettings.value(QStringLiteral("keyRespTime"), 8).toInt();
+    const QString devPath  = qSettings.value(QStringLiteral("devicePath")).toString();
+
+    if (colorMode >= 0 && colorMode < ui->cbox_colormodes->count())
+        ui->cbox_colormodes->setCurrentIndex(colorMode);
+    if (pollingRate >= 0 && pollingRate < ui->cbox_pollingrate->count())
+        ui->cbox_pollingrate->setCurrentIndex(pollingRate);
+
+    ui->chbox_anglesnap->setChecked(angleSnap);
+    ui->chbox_rippleCTRL->setChecked(rippleCtrl);
+
+    ui->sldr_sleeptime->setValue(sleepTime);
+    ui->lbl_sleepTimerValue->setText(QStringLiteral("Sleep Time: ") + QString::number(sleepTime) + QStringLiteral("min"));
+
+    ui->sldr_deepSleepTime->setValue(deepSleep);
+    ui->lbl_deepsleeptimeValue->setText(QStringLiteral("Deep Sleep Time: ") + QString::number(deepSleep) + QStringLiteral("min"));
+
+    ui->sld_keyresptime->setValue(keyRespTime);
+    ui->lbl_kreptimeValueDisplay->setText(QString::number(keyRespTime) + QStringLiteral(" ms"));
+
+    updateInfoLabels();
+
+    if (!devPath.isEmpty())
+        loadDeviceAndBattery(devPath);
+}
+
+void atsx11::saveSettings()
+{
+    QSettings qSettings(kSettingsOrg, kSettingsApp);
+
+    qSettings.setValue(QStringLiteral("colorMode"),    ui->cbox_colormodes->currentIndex());
+    qSettings.setValue(QStringLiteral("pollingRate"),  ui->cbox_pollingrate->currentIndex());
+    qSettings.setValue(QStringLiteral("angleSnap"),    ui->chbox_anglesnap->isChecked());
+    qSettings.setValue(QStringLiteral("rippleControl"),ui->chbox_rippleCTRL->isChecked());
+    qSettings.setValue(QStringLiteral("sleepTime"),    ui->sldr_sleeptime->value());
+    qSettings.setValue(QStringLiteral("deepSleepTime"),ui->sldr_deepSleepTime->value());
+    qSettings.setValue(QStringLiteral("keyRespTime"),  ui->sld_keyresptime->value());
+    qSettings.sync();
+}
+
+
+void atsx11::on_btn_apply_clicked()
+{
+    if (m_currentDevicePath.isEmpty()) {
+        ui->lbl_debug->setText(QStringLiteral("<html><head/><body><p><span style='color:red;'>Error: no device selected. Open Settings to select a device.</span></p></body></html>"));
+        QMessageBox::warning(this, QStringLiteral("Error"), QStringLiteral("No device selected. Open Settings to choose a device."));
+        return;
+    }
+
+    const int color        = ui->cbox_colormodes->currentIndex();
+    const int prate        = ui->cbox_pollingrate->currentIndex();
+    const bool angleSnap   = ui->chbox_anglesnap->isChecked();
+    const int keyRespTime  = ui->sld_keyresptime->value();
+    const int sleepTime    = ui->sldr_sleeptime->value();
+    const int deepSleepTime= ui->sldr_deepSleepTime->value();
+    const bool rippleCtrl  = ui->chbox_rippleCTRL->isChecked();
+
+    const int result = applySettingsFromUser(m_currentDevicePath, color, prate, angleSnap, keyRespTime, sleepTime, deepSleepTime, rippleCtrl);
+    if (result != 0) {
+        ui->lbl_debug->setText(QStringLiteral("<html><head/><body><p><span style='color:red;'>Error: failed to apply settings</span></p></body></html>"));
+        QMessageBox::warning(this, QStringLiteral("Error"), QStringLiteral("Failed to apply settings to the device (code %1).").arg(result));
+        return;
+    }
+
+    saveSettings();
+    updateInfoLabels();
+    ui->lbl_debug->setText(QStringLiteral("<html><head/><body><p><span style='color:green;'>Successfully applied</span></p></body></html>"));
+    QMessageBox::information(this, QStringLiteral("Success"), QStringLiteral("Settings applied to %1.").arg(m_currentDevicePath));
 }
 
 void atsx11::onBatteryInfoReady()
@@ -255,33 +184,6 @@ void atsx11::onBatteryInfoReady()
     }
 }
 
-
-void atsx11::on_btn_refresh_clicked()
-{
-    ui->cbox_devices->setCurrentIndex(-1);
-    ui->lbl_batteryinfo->setEnabled(false);
-    ui->pbar_batteryinfo->setEnabled(false);
-    ui->pbar_batteryinfo->setValue(-1);
-
-    populateDevices(ui->chbox_alldevices->isChecked());
-
-    const int quantity = devicesConnected.size();
-    ui->lbl_debug->setText("Refreshed devices list (" + QString::number(quantity) + " devices).");
-}
-
-void atsx11::on_chbox_alldevices_stateChanged(int arg1)
-{
-    ui->cbox_devices->clear();
-    populateDevices(arg1 != 0);
-
-    const int quantity = devicesConnected.size();
-    if (arg1 == 0) {
-        ui->lbl_debug->setText("Listing only mice devices (" + QString::number(quantity) + ").");
-    } else {
-        ui->lbl_debug->setText("Listing all devices (" + QString::number(quantity) + ").");
-    }
-}
-
 void atsx11::on_sld_keyresptime_sliderMoved(int position)
 {
     ui->lbl_kreptimeValueDisplay->setText(QString::number(position) + " ms");
@@ -297,11 +199,52 @@ void atsx11::on_sldr_sleeptime_sliderMoved(int position)
     ui->lbl_sleepTimerValue->setText("Sleep Time: " + QString::number(position) + "min");
 }
 
-
-
 void atsx11::on_btn_settings_clicked()
 {
-    if (!m_settings)
+    if (!m_settings) {
         m_settings = new settings(this);
+        connect(m_settings, &settings::deviceSelected,
+                this, &atsx11::onSettingsDeviceSelected);
+        connect(m_settings, &settings::profileApplied,
+                this, &atsx11::reloadSettingsUi);
+    }
     m_settings->show();
+}
+
+void atsx11::onSettingsDeviceSelected(const QString &devicePath)
+{
+    loadDeviceAndBattery(devicePath);
+    ui->lbl_debug->setText(QStringLiteral("Device selected: ") + devicePath + QStringLiteral(". Reading battery\u2026"));
+}
+
+void atsx11::reloadSettingsUi()
+{
+    QSettings qSettings(kSettingsOrg, kSettingsApp);
+
+    const int colorMode   = qSettings.value(QStringLiteral("colorMode"),    0).toInt();
+    const int pollingRate = qSettings.value(QStringLiteral("pollingRate"),   0).toInt();
+    const bool angleSnap  = qSettings.value(QStringLiteral("angleSnap"),    false).toBool();
+    const bool rippleCtrl = qSettings.value(QStringLiteral("rippleControl"),false).toBool();
+    const int sleepTime   = qSettings.value(QStringLiteral("sleepTime"),    5).toInt();
+    const int deepSleep   = qSettings.value(QStringLiteral("deepSleepTime"),10).toInt();
+    const int keyRespTime = qSettings.value(QStringLiteral("keyRespTime"),  8).toInt();
+
+    if (colorMode >= 0 && colorMode < ui->cbox_colormodes->count())
+        ui->cbox_colormodes->setCurrentIndex(colorMode);
+    if (pollingRate >= 0 && pollingRate < ui->cbox_pollingrate->count())
+        ui->cbox_pollingrate->setCurrentIndex(pollingRate);
+
+    ui->chbox_anglesnap->setChecked(angleSnap);
+    ui->chbox_rippleCTRL->setChecked(rippleCtrl);
+
+    ui->sldr_sleeptime->setValue(sleepTime);
+    ui->lbl_sleepTimerValue->setText(QStringLiteral("Sleep Time: ") + QString::number(sleepTime) + QStringLiteral("min"));
+
+    ui->sldr_deepSleepTime->setValue(deepSleep);
+    ui->lbl_deepsleeptimeValue->setText(QStringLiteral("Deep Sleep Time: ") + QString::number(deepSleep) + QStringLiteral("min"));
+
+    ui->sld_keyresptime->setValue(keyRespTime);
+    ui->lbl_kreptimeValueDisplay->setText(QString::number(keyRespTime) + QStringLiteral(" ms"));
+
+    updateInfoLabels();
 }
