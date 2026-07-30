@@ -22,8 +22,8 @@ atsx11::atsx11(QWidget *parent)
 {
     ui->setupUi(this);
     setWindowIcon(QIcon(QStringLiteral(":/images/assets/mouse.png")));
-    ui->btn_settings->setIcon(QIcon());
-    ui->btn_settings->setText(QStringLiteral("\u2699"));
+    ui->btn_settings->setIcon(QIcon(QStringLiteral(":/images/assets/wgear.png")));
+    ui->btn_settings->setText(QString());
     ui->lbl_isCharging->setPixmap(QPixmap());
 
     ui->lbl_batteryinfo->setEnabled(false);

@@ -2575,7 +2575,9 @@
           <string/>
          </property>
          <property name="icon">
-          <iconset theme="QIcon::ThemeIcon::DocumentProperties"/>
+          <iconset resource="mouse_model_display.qrc">
+           <normaloff>:/images/assets/wgear.png</normaloff>:/images/assets/wgear.png
+          </iconset>
          </property>
         </widget>
        </item>
