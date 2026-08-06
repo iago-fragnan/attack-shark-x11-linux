@@ -5,6 +5,11 @@
 
 This software is for the mouse [Attack Shark X11](https://attackshark.com/products/attack-shark-x11-wireless-gaming-mouse-charging-dock), which you can control basic settings from it like polling rate, color modes, this is a workaround software control and still being developed to support all features he has on Windows.
 
+## Disclaimer
+This project is an independent, unofficial, and community-driven effort. It is not affiliated with, endorsed by, sponsored by, or otherwise associated with Attack Shark, Guangzhou Shijunxingcheng Electronics Technology Co., Ltd., or PixArt Imaging Inc.
+This repository does not contain any source code from the original software driver. All communication protocols used by this project were reverse engineered through lawful methods based on publicly observable behavior and independent analysis.
+All trademarks, product names, and company names mentioned in this repository are the property of their respective owners and are used for identification purposes only.
+
 ## Install
 
 **Arch Linux (AUR):**
@@ -12,9 +17,12 @@ This software is for the mouse [Attack Shark X11](https://attackshark.com/produc
 paru -S attackshark-x11 # you can also use yay
 ```
 
-**Debian:**
-
-soon, but you can build it for yourself
+**Debian/Ubuntu:**
+```sh
+sudo apt-get install -y wget git cmake build-essential pkg-config libudev-dev libusb-1.0-0-dev qt6-base-dev
+wget https://github.com/iago-fragnan/attack-shark-x11-linux/releases/download/v2.0.1/attackshark-x11-v2.0.1.deb
+sudo dpkg -i attackshark-x11.deb
+```
 
 
 ## TODO
@@ -31,14 +39,21 @@ soon, but you can build it for yourself
 - [x] Ripple Control
 - [x] Angle Snapping
 - [x] Automatic Device Selection
-- [ ] Custom window for settings (Device Selection, Auto Startup, Profiles, Always minimize to System Tray)
+- [x] Custom window for settings
     - [ ] Macro Support
     - [ ] Minimize to System Tray
-    - [ ] Profiles
+    - [x] Profiles
+        - [x] Apply
+        - [ ] Save
+        - [ ] Load
+    - [x] Device selection
+    - [ ] Auto Startup
 
 
 ## CREDITS
 
-- Lightining Icon from [Flaticon](https://www.flaticon.com/free-icon/flash_252851?term=lightning&related_id=252851)
+- Lightining icon from [Flaticon](https://www.flaticon.com/free-icon/flash_252851?term=lightning&related_id=252851)
+
+- Gear/Settings icon from [Flaticon](https://www.flaticon.com/free-icon/settings_3524659?term=gear&related_id=3524659)
 
 - Additional reverse engineering from [HarukaYamamoto0](https://github.com/HarukaYamamoto0/attack-shark-x11-driver/)

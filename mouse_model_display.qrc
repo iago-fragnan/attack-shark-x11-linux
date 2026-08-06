@@ -3,6 +3,7 @@
         <file>assets/mouse.png</file>
         <file>assets/mouse-2.png</file>
         <file>assets/lightning.png</file>
+        <file>assets/wgear.png</file>
     </qresource>
     <qresource prefix="/"/>
 </RCC>

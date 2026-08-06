@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>720</width>
-    <height>350</height>
+    <height>320</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -22,13 +22,13 @@
   <property name="minimumSize">
    <size>
     <width>720</width>
-    <height>350</height>
+    <height>320</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>720</width>
-    <height>350</height>
+    <height>320</height>
    </size>
   </property>
   <property name="sizeIncrement">
@@ -56,10 +56,10 @@
    <widget class="QLabel" name="lbl_image">
     <property name="geometry">
      <rect>
-      <x>50</x>
-      <y>0</y>
+      <x>40</x>
+      <y>10</y>
       <width>141</width>
-      <height>271</height>
+      <height>261</height>
      </rect>
     </property>
     <property name="text">
@@ -2531,20 +2531,103 @@
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>299</y>
-      <width>411</width>
-      <height>51</height>
+      <y>260</y>
+      <width>721</width>
+      <height>58</height>
      </rect>
     </property>
-    <layout class="QHBoxLayout" name="btmlayout_settings">
+    <layout class="QHBoxLayout" name="btmlayout_settings" stretch="0">
      <property name="spacing">
       <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>6</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>6</number>
+     </property>
+     <property name="bottomMargin">
+      <number>6</number>
      </property>
      <item>
       <layout class="QGridLayout" name="gridLayout_7">
        <property name="spacing">
         <number>0</number>
        </property>
+       <item row="2" column="2">
+        <widget class="QPushButton" name="btn_settings">
+         <property name="minimumSize">
+          <size>
+           <width>40</width>
+           <height>25</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>40</width>
+           <height>25</height>
+          </size>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="mouse_model_display.qrc">
+           <normaloff>:/images/assets/wgear.png</normaloff>:/images/assets/wgear.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="lbl_isCharging">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>24</width>
+           <height>24</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>24</width>
+           <height>24</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Charging Indicator</string>
+         </property>
+         <property name="toolTipDuration">
+          <number>5</number>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::Shape::NoFrame</enum>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="pixmap">
+          <pixmap resource="mouse_model_display.qrc">:/images/assets/lightning.png</pixmap>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
        <item row="2" column="0">
         <widget class="QProgressBar" name="pbar_batteryinfo">
          <property name="enabled">
@@ -2622,181 +2705,20 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="lbl_isCharging">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>24</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>24</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="font">
-          <font>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="toolTip">
-          <string>Charging Indicator</string>
-         </property>
-         <property name="toolTipDuration">
-          <number>5</number>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::Shape::NoFrame</enum>
-         </property>
+       <item row="2" column="3">
+        <widget class="QLabel" name="lbl_debug">
          <property name="text">
-          <string/>
-         </property>
-         <property name="pixmap">
-          <pixmap resource="mouse_model_display.qrc">:/images/assets/lightning.png</pixmap>
+          <string>Ready</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignCenter</set>
+          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         </property>
+         <property name="margin">
+          <number>0</number>
          </property>
         </widget>
        </item>
       </layout>
-     </item>
-     <item>
-      <layout class="QGridLayout" name="gridLayout_9" columnstretch="0,0,0">
-       <property name="horizontalSpacing">
-        <number>5</number>
-       </property>
-       <property name="verticalSpacing">
-        <number>0</number>
-       </property>
-       <item row="0" column="0">
-        <widget class="QLabel" name="lbl_device">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>14</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>14</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the device name or the 2.4ghz receptor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="text">
-          <string>Device:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QCheckBox" name="chbox_alldevices">
-         <property name="acceptDrops">
-          <bool>true</bool>
-         </property>
-         <property name="toolTip">
-          <string notr="true" comment="If your device doesnt show up, enable it and search it." extracomment="If your device doesnt show up, enable it and search it.">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If your device doesnt show up, enable this.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="statusTip">
-          <string notr="true" comment="If your device doesnt show up, enable it and search it." extracomment="If your device doesnt show up, enable it and search it."/>
-         </property>
-         <property name="whatsThis">
-          <string notr="true" comment="If your device doesnt show up, enable it and search it." extracomment="If your device doesnt show up, enable it and search it."/>
-         </property>
-         <property name="text">
-          <string>Show All</string>
-         </property>
-         <property name="tristate">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QComboBox" name="cbox_devices">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="currentText">
-          <string/>
-         </property>
-         <property name="currentIndex">
-          <number>-1</number>
-         </property>
-         <property name="placeholderText">
-          <string>Select Device</string>
-         </property>
-         <property name="frame">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QPushButton" name="btn_refresh">
-         <property name="maximumSize">
-          <size>
-           <width>35</width>
-           <height>24</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Refresh devices&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset theme="QIcon::ThemeIcon::SystemReboot"/>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="layoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>411</x>
-      <y>320</y>
-      <width>309</width>
-      <height>24</height>
-     </rect>
-    </property>
-    <layout class="QVBoxLayout" name="layout_debugtext">
-     <item>
-      <widget class="QLabel" name="lbl_debug">
-       <property name="text">
-        <string>Ready</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-       </property>
-       <property name="margin">
-        <number>0</number>
-       </property>
-      </widget>
      </item>
     </layout>
    </widget>
