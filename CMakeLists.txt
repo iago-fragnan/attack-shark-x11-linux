@@ -26,6 +26,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         assets/mouse-2.png
         mouse_model_display.qrc
         hook.h hook.cpp
+        settings.h settings.cpp settings.ui
+
+
+
 
     )
 # Define target properties for Android with Qt 6 as:
