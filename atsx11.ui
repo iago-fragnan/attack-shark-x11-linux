@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>720</width>
-    <height>350</height>
+    <height>320</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -22,13 +22,13 @@
   <property name="minimumSize">
    <size>
     <width>720</width>
-    <height>350</height>
+    <height>320</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>720</width>
-    <height>350</height>
+    <height>320</height>
    </size>
   </property>
   <property name="sizeIncrement">
@@ -2531,7 +2531,7 @@
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>300</y>
+      <y>260</y>
       <width>721</width>
       <height>58</height>
      </rect>
@@ -2576,8 +2576,7 @@
          </property>
          <property name="icon">
           <iconset resource="mouse_model_display.qrc">
-           <normaloff>:/images/assets/wgear.png</normaloff>:/images/assets/wgear.png
-          </iconset>
+           <normaloff>:/images/assets/wgear.png</normaloff>:/images/assets/wgear.png</iconset>
          </property>
         </widget>
        </item>

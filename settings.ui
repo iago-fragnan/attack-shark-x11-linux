@@ -45,7 +45,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>10</y>
+     <y>0</y>
      <width>371</width>
      <height>41</height>
     </rect>
@@ -160,7 +160,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>100</y>
+     <y>90</y>
      <width>371</width>
      <height>43</height>
     </rect>
@@ -178,6 +178,9 @@
     </item>
     <item>
      <widget class="QCheckBox" name="chkbox_minimizeTray">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="text">
        <string>Enabled</string>
       </property>
@@ -189,9 +192,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>140</y>
+     <y>130</y>
      <width>371</width>
-     <height>49</height>
+     <height>41</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -207,6 +210,9 @@
     </item>
     <item>
      <widget class="QCheckBox" name="chkbox_autostartup">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="text">
        <string>Enabled</string>
       </property>
@@ -218,9 +224,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>50</y>
+     <y>40</y>
      <width>261</width>
-     <height>51</height>
+     <height>52</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
@@ -232,10 +238,16 @@
     </property>
     <item row="2" column="1">
      <widget class="QPushButton" name="btn_applyProfilePreset">
+      <property name="minimumSize">
+       <size>
+        <width>60</width>
+        <height>24</height>
+       </size>
+      </property>
       <property name="maximumSize">
        <size>
-        <width>75</width>
-        <height>120</height>
+        <width>60</width>
+        <height>24</height>
        </size>
       </property>
       <property name="text">
