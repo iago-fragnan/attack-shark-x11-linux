@@ -12,6 +12,17 @@ All trademarks, product names, and company names mentioned in this repository ar
 
 ## Install
 
+**Build it yourself (Recommended):**
+```sh
+git clone https://github.com/iago-fragnan/attack-shark-x11-linux.git
+# Install dependencies
+# cmake build-essential pkg-config libudev-dev libusb-1.0-0-dev qt6-base-dev
+cd attack-shark-x11-linux
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+./build/attackshark-x11
+```
+
 **Arch Linux (AUR):**
 ```sh
 paru -S attackshark-x11 # you can also use yay
