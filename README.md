@@ -65,8 +65,8 @@ sudo dpkg -i attackshark-x11.deb
 
 ## CREDITS
 
-- Lightining icon from [Flaticon](https://www.flaticon.com/free-icon/flash_252851?term=lightning&related_id=252851)
+- Lightning icon from [Flaticon](https://www.flaticon.com/free-icon/flash_252851?term=lightning&related_id=252851)
 
-- Gear/Settings icon from [Flaticon](https://www.flaticon.com/free-icon/settings_3524659?term=gear&related_id=3524659)
+- Settings icon from [Flaticon](https://www.flaticon.com/free-icon/settings_3524659?term=gear&related_id=3524659)
 
 - Additional reverse engineering from [HarukaYamamoto0](https://github.com/HarukaYamamoto0/attack-shark-x11-driver/)
