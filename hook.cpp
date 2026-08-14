@@ -31,7 +31,7 @@ const uint8_t POLLING_RATES[4][2] = {
 };
 
 const uint8_t COLOR_MODES[4][15] = {
-    {0x05, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+    {0x05, 0x0F, 0x01, 0x10, 0x01, 0xA8, 0x00, 0x00, 0x00, 0x01, 0x06, 0x00, 0xC0, 0x00, 0x00},
     {0x05, 0x0F, 0x01, 0x20, 0x01, 0xA8, 0x00, 0x00, 0xFF, 0x01, 0x06, 0x01, 0xCF, 0x00, 0x00},
     {0x05, 0x0F, 0x01, 0x30, 0x01, 0xA8, 0x00, 0x00, 0xFF, 0x01, 0x06, 0x01, 0xDF, 0x00, 0x00},
     {0x05, 0x0F, 0x01, 0x40, 0x01, 0xA8, 0x00, 0x00, 0xFF, 0x01, 0x06, 0x01, 0xEF, 0x00, 0x00},
@@ -39,27 +39,11 @@ const uint8_t COLOR_MODES[4][15] = {
 
 void buildColorReport(int colorMode, int sleepTime, int deepSleepTime, int keyRespTime, uint8_t out[15])
 {
+    Q_UNUSED(sleepTime);
+    Q_UNUSED(deepSleepTime);
+    Q_UNUSED(keyRespTime);
+
     std::memcpy(out, COLOR_MODES[colorMode], 15);
-    
-    out[2] = 0x01;
-
-    uint8_t hardwareSpeed = out[4] & 0x0F;
-    if (hardwareSpeed == 0) {
-        hardwareSpeed = 0x01;
-    }
-    int bucket = (deepSleepTime - 1) / 16;
-    out[4] = static_cast<uint8_t>((bucket << 4) | hardwareSpeed);
-
-    out[5] = static_cast<uint8_t>(0x08 + (deepSleepTime * 0x10));
-
-    out[9] = static_cast<uint8_t>(sleepTime * 2);
-
-    out[10] = static_cast<uint8_t>(((keyRespTime - 4) / 2) + 2);
-
-    uint8_t checksum = 0;
-    for (int i = 3; i <= 10; ++i)
-        checksum = static_cast<uint8_t>(checksum + out[i]);
-    out[12] = checksum;
 }
 
 struct udev_device *usbParent(struct udev_device *dev)
@@ -153,8 +137,11 @@ bool sendReport(
     if (!handle)
         return false;
 
-    if (libusb_kernel_driver_active(handle, kConfigInterface) == 1)
-        libusb_detach_kernel_driver(handle, kConfigInterface);
+    bool kernelDriverDetached = false;
+    if (libusb_kernel_driver_active(handle, kConfigInterface) == 1) {
+        kernelDriverDetached =
+            libusb_detach_kernel_driver(handle, kConfigInterface) == 0;
+    }
 
     const int rc = libusb_control_transfer(
         handle,
@@ -165,6 +152,9 @@ bool sendReport(
         const_cast<uint8_t *>(data),
         static_cast<uint16_t>(length),
         200);
+
+    if (kernelDriverDetached)
+        libusb_attach_kernel_driver(handle, kConfigInterface);
 
     libusb_close(handle);
     return rc == length || rc == LIBUSB_ERROR_TIMEOUT;
