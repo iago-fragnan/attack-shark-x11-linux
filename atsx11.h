@@ -3,8 +3,11 @@
 
 #include <QMainWindow>
 #include <QFutureWatcher>
+#include <QTimer>
+#include "dpibar.h"
 
 class QCloseEvent;
+class systemtray;
 class settings;
 
 QT_BEGIN_NAMESPACE
@@ -30,12 +33,17 @@ private slots:
     void on_sldr_sleeptime_sliderMoved(int position);
     void on_sldr_deepSleepTime_sliderMoved(int position);
     void onBatteryInfoReady();
+    void refreshBattery();
     void on_btn_settings_clicked();
     void onSettingsDeviceSelected(const QString &devicePath);
     void reloadSettingsUi();
+    void onDpiValueChanged(int stage, int dpi);
+    void onDpiStageActivated(int stage);
+    void onTrayRestoreRequested();
+    void onTrayQuitRequested();
 
 private:
-    void loadDeviceAndBattery(const QString &devicePath);
+    void loadDeviceAndBattery(const QString &devicePath, bool resetUi = true);
     void loadSettings();
     void saveSettings();
     void updateInfoLabels();
@@ -43,6 +51,10 @@ private:
     Ui::atsx11 *ui;
     QString m_currentDevicePath;
     QFutureWatcher<int> *m_batteryWatcher = nullptr;
+    QTimer *m_batteryTimer = nullptr;
     settings *m_settings = nullptr;
+    DpiBarWidget *m_dpiBar = nullptr;
+    systemtray *m_tray = nullptr;
+    bool m_quitting = false;
 };
 #endif // ATSX11_H

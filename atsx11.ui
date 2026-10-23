@@ -9,28 +9,28 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>720</width>
-    <height>320</height>
-   </rect>
-  </property>
-  <property name="sizePolicy">
+<width>740</width>
+      <height>498</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="minimumSize">
-   <size>
-    <width>720</width>
-    <height>320</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>720</width>
-    <height>320</height>
-   </size>
-  </property>
+<property name="minimumSize">
+    <size>
+<width>740</width>
+      <height>498</height>
+     </size>
+    </property>
+<property name="maximumSize">
+    <size>
+<width>740</width>
+      <height>498</height>
+     </size>
+    </property>
   <property name="sizeIncrement">
    <size>
     <width>120</width>
@@ -76,7 +76,7 @@
     <property name="geometry">
      <rect>
       <x>500</x>
-      <y>140</y>
+      <y>162</y>
       <width>211</width>
       <height>52</height>
      </rect>
@@ -122,7 +122,7 @@
     <property name="geometry">
      <rect>
       <x>220</x>
-      <y>140</y>
+      <y>162</y>
       <width>161</width>
       <height>131</height>
      </rect>
@@ -232,7 +232,7 @@
     <property name="geometry">
      <rect>
       <x>500</x>
-      <y>70</y>
+      <y>92</y>
       <width>211</width>
       <height>61</height>
      </rect>
@@ -277,7 +277,7 @@
     <property name="geometry">
      <rect>
       <x>390</x>
-      <y>70</y>
+      <y>92</y>
       <width>101</width>
       <height>61</height>
      </rect>
@@ -318,7 +318,7 @@
     <property name="geometry">
      <rect>
       <x>390</x>
-      <y>140</y>
+      <y>162</y>
       <width>101</width>
       <height>51</height>
      </rect>
@@ -347,7 +347,7 @@
     <property name="geometry">
      <rect>
       <x>220</x>
-      <y>70</y>
+      <y>92</y>
       <width>160</width>
       <height>61</height>
      </rect>
@@ -404,15 +404,15 @@
      </item>
     </layout>
    </widget>
-   <widget class="QWidget" name="gridLayoutWidget_8">
-    <property name="geometry">
-     <rect>
-      <x>220</x>
-      <y>10</y>
-      <width>491</width>
-      <height>51</height>
-     </rect>
-    </property>
+     <widget class="QWidget" name="gridLayoutWidget_8">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>10</y>
+       <width>491</width>
+       <height>73</height>
+      </rect>
+     </property>
     <layout class="QGridLayout" name="gridLayout_8">
      <property name="leftMargin">
       <number>0</number>
@@ -1933,7 +1933,7 @@
           <x>0</x>
           <y>0</y>
           <width>121</width>
-          <height>51</height>
+          <height>73</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -1943,6 +1943,25 @@
          <property name="rightMargin">
           <number>5</number>
          </property>
+         <item>
+          <widget class="QLabel" name="lbl_activeDpi">
+           <property name="text">
+            <string>DPI</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_activeDpiValue">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>&#x2014;</string>
+           </property>
+          </widget>
+         </item>
          <item>
           <widget class="QLabel" name="lbl_activeAngleSnap">
            <property name="text">
@@ -2488,7 +2507,7 @@
     <property name="geometry">
      <rect>
       <x>390</x>
-      <y>210</y>
+      <y>232</y>
       <width>321</width>
       <height>61</height>
      </rect>
@@ -2527,12 +2546,47 @@
      </item>
     </layout>
    </widget>
-   <widget class="QWidget" name="horizontalLayoutWidget">
+   <widget class="QWidget" name="dpibarWidget">
     <property name="geometry">
      <rect>
-      <x>0</x>
-      <y>260</y>
-      <width>721</width>
+      <x>20</x>
+      <y>300</y>
+      <width>700</width>
+      <height>120</height>
+     </rect>
+    </property>
+    <layout class="QVBoxLayout" name="dpibarLayout">
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="dpibarCaption">
+       <property name="text">
+        <string>DPI stages</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="DpiBarWidget" name="dpi_bar" native="true">
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="horizontalLayoutWidget">
+    <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>440</y>
+       <width>740</width>
       <height>58</height>
      </rect>
     </property>
@@ -2729,6 +2783,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>DpiBarWidget</class>
+   <extends>QWidget</extends>
+   <header>dpibar.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="mouse_model_display.qrc"/>
  </resources>

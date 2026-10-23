@@ -179,7 +179,7 @@
     <item>
      <widget class="QCheckBox" name="chkbox_minimizeTray">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="text">
        <string>Enabled</string>
@@ -211,7 +211,7 @@
     <item>
      <widget class="QCheckBox" name="chkbox_autostartup">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="text">
        <string>Enabled</string>

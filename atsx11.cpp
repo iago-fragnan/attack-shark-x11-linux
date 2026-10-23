@@ -6,8 +6,11 @@
 #include <QSettings>
 #include <QStyle>
 #include <QtConcurrent/QtConcurrent>
+#include <algorithm>
 #include "hook.h"
 #include "settings.h"
+#include "systemtray.h"
+#include <QSystemTrayIcon>
 
 
 namespace {
@@ -22,6 +25,14 @@ atsx11::atsx11(QWidget *parent)
 {
     ui->setupUi(this);
     setWindowIcon(QIcon(QStringLiteral(":/images/assets/mouse.png")));
+    if (QSystemTrayIcon::isSystemTrayAvailable()) {
+        m_tray = new systemtray(
+            QIcon(QStringLiteral(":/images/assets/mouse.png")), this, this);
+        connect(m_tray, &systemtray::restoreRequested,
+                this, &atsx11::onTrayRestoreRequested);
+        connect(m_tray, &systemtray::quitRequested,
+                this, &atsx11::onTrayQuitRequested);
+    }
     ui->btn_settings->setIcon(QIcon(QStringLiteral(":/images/assets/wgear.png")));
     ui->btn_settings->setText(QString());
     ui->lbl_isCharging->setPixmap(QPixmap());
@@ -31,7 +42,20 @@ atsx11::atsx11(QWidget *parent)
     ui->lbl_isCharging->setEnabled(false);
     ui->btn_apply->setEnabled(false);
 
+    m_dpiBar = ui->dpi_bar;
+
+    m_batteryTimer = new QTimer(this);
+    m_batteryTimer->setInterval(30000);
+    connect(m_batteryTimer, &QTimer::timeout,
+            this, &atsx11::refreshBattery);
+    m_batteryTimer->start();
+
     loadSettings();
+
+    connect(m_dpiBar, &DpiBarWidget::valueChanged,
+            this, &atsx11::onDpiValueChanged);
+    connect(m_dpiBar, &DpiBarWidget::stageActivated,
+            this, &atsx11::onDpiStageActivated);
 }
 
 atsx11::~atsx11()
@@ -41,6 +65,15 @@ atsx11::~atsx11()
 
 void atsx11::closeEvent(QCloseEvent *event)
 {
+    if (m_tray && !m_quitting) {
+        QSettings qSettings(kSettingsOrg, kSettingsApp);
+        if (qSettings.value(QStringLiteral("minToTray"), true).toBool()) {
+            event->ignore();
+            hide();
+            return;
+        }
+    }
+
     saveSettings();
     QMainWindow::closeEvent(event);
 }
@@ -51,18 +84,24 @@ void atsx11::updateInfoLabels()
     ui->lbl_infoLEDValue->setText(ui->cbox_colormodes->currentText());
     ui->info_ripplectrlValue->setText(ui->chbox_rippleCTRL->isChecked() ? QStringLiteral("On") : QStringLiteral("Off"));
     ui->lbl_activeAngleSnapValue->setText(ui->chbox_anglesnap->isChecked() ? QStringLiteral("On") : QStringLiteral("Off"));
+
+    const int active = m_dpiBar->activeStage();
+    ui->lbl_activeDpiValue->setText(
+        QString::number(m_dpiBar->values()[active - 1]) + QStringLiteral(" DPI"));
 }
 
-void atsx11::loadDeviceAndBattery(const QString &devicePath)
+void atsx11::loadDeviceAndBattery(const QString &devicePath, bool resetUi)
 {
     m_currentDevicePath = devicePath;
 
-    ui->btn_apply->setEnabled(true);
-    ui->lbl_batteryinfo->setEnabled(true);
-    ui->pbar_batteryinfo->setEnabled(true);
-    ui->pbar_batteryinfo->setValue(0);
-    ui->lbl_isCharging->setEnabled(false);
-    ui->lbl_debug->setText(QStringLiteral("Reading battery\u2026"));
+    if (resetUi) {
+        ui->btn_apply->setEnabled(true);
+        ui->lbl_batteryinfo->setEnabled(true);
+        ui->pbar_batteryinfo->setEnabled(true);
+        ui->pbar_batteryinfo->setValue(0);
+        ui->lbl_isCharging->setEnabled(false);
+        ui->lbl_debug->setText(QStringLiteral("Reading battery\u2026"));
+    }
 
     if (m_batteryWatcher) {
         m_batteryWatcher->cancel();
@@ -108,6 +147,19 @@ void atsx11::loadSettings()
     ui->sld_keyresptime->setValue(keyRespTime);
     ui->lbl_kreptimeValueDisplay->setText(QString::number(keyRespTime) + QStringLiteral(" ms"));
 
+    // Load DPI
+    const QVariantList dpiList = qSettings.value(
+        QStringLiteral("dpiValues"),
+        QVariantList{800, 1600, 2400, 3200, 5000, 22000}).toList();
+    const int dpiDefaults[6] = {800, 1600, 2400, 3200, 5000, 22000};
+    int dpi[6] = {};
+    for (int i = 0; i < 6; ++i)
+        dpi[i] = (i < dpiList.size()) ? dpiList[i].toInt() : dpiDefaults[i];
+    m_dpiBar->setValues(dpi);
+    const int activeStage = qSettings.value(
+        QStringLiteral("activeDpiStage"), 1).toInt();
+    m_dpiBar->setActiveStage(std::clamp(activeStage, 1, 6));
+
     updateInfoLabels();
 
     if (!devPath.isEmpty())
@@ -125,6 +177,13 @@ void atsx11::saveSettings()
     qSettings.setValue(QStringLiteral("sleepTime"),    ui->sldr_sleeptime->value());
     qSettings.setValue(QStringLiteral("deepSleepTime"),ui->sldr_deepSleepTime->value());
     qSettings.setValue(QStringLiteral("keyRespTime"),  ui->sld_keyresptime->value());
+
+    QVariantList dpiList;
+    for (int i = 0; i < 6; ++i)
+        dpiList << m_dpiBar->values()[i];
+    qSettings.setValue(QStringLiteral("dpiValues"), dpiList);
+    qSettings.setValue(QStringLiteral("activeDpiStage"),
+        m_dpiBar->activeStage());
     qSettings.sync();
 }
 
@@ -145,9 +204,29 @@ void atsx11::on_btn_apply_clicked()
     const int deepSleepTime= ui->sldr_deepSleepTime->value();
     const bool rippleCtrl  = ui->chbox_rippleCTRL->isChecked();
 
-    const int result = applySettingsFromUser(m_currentDevicePath, color, prate, angleSnap, keyRespTime, sleepTime, deepSleepTime, rippleCtrl);
+    int dpi[6];
+    for (int i = 0; i < 6; ++i)
+        dpi[i] = m_dpiBar->values()[i];
+    const int activeDpiStage = m_dpiBar->activeStage();
+
+    const int result = applySettingsFromUser(m_currentDevicePath, color, prate, angleSnap, keyRespTime, sleepTime, deepSleepTime, rippleCtrl, dpi, activeDpiStage);
     if (result != 0) {
         ui->lbl_debug->setText(QStringLiteral("<html><head/><body><p><span style='color:red;'>Error: failed to apply settings</span></p></body></html>"));
+
+        // A refused open means the udev rule is missing. That is the one failure
+        // the user can actually do something about, so say what to run instead of
+        // reporting a bare code.
+        if (result == kApplyNoPermission) {
+            const QString reason = describeAccessProblem(m_currentDevicePath);
+            QMessageBox::warning(
+                this,
+                QStringLiteral("No permission"),
+                reason.isEmpty()
+                    ? QStringLiteral("This user does not have permission to write to the mouse.")
+                    : reason);
+            return;
+        }
+
         QMessageBox::warning(this, QStringLiteral("Error"), QStringLiteral("Failed to apply settings to the device (code %1).").arg(result));
         return;
     }
@@ -156,6 +235,24 @@ void atsx11::on_btn_apply_clicked()
     updateInfoLabels();
     ui->lbl_debug->setText(QStringLiteral("<html><head/><body><p><span style='color:green;'>Successfully applied</span></p></body></html>"));
     QMessageBox::information(this, QStringLiteral("Success"), QStringLiteral("Settings applied to %1.").arg(m_currentDevicePath));
+}
+
+void atsx11::onDpiValueChanged(int, int)
+{
+    updateInfoLabels();
+    saveSettings();
+}
+
+void atsx11::onDpiStageActivated(int)
+{
+    updateInfoLabels();
+    saveSettings();
+}
+
+void atsx11::refreshBattery()
+{
+    if (!m_currentDevicePath.isEmpty())
+        loadDeviceAndBattery(m_currentDevicePath, false);
 }
 
 void atsx11::onBatteryInfoReady()
@@ -172,15 +269,18 @@ void atsx11::onBatteryInfoReady()
         ui->lbl_isCharging->setPixmap(QPixmap(":/images/assets/lightning.png"));
         ui->lbl_debug->setText(QStringLiteral("Mouse is charging"));
         ui->pbar_batteryinfo->setValue(0);
+        m_batteryTimer->start(2000);
     } else if (battery < 0) {
         ui->lbl_isCharging->setEnabled(false);
         ui->lbl_debug->setText(QStringLiteral("<html><head/><body><p><span style='color:orange;'>Battery info unavailable</span></p></body></html>"));
         ui->pbar_batteryinfo->setValue(0);
+        m_batteryTimer->start(2000);
     } else {
         ui->lbl_isCharging->setEnabled(true);
-        ui->lbl_isCharging->setPixmap(QPixmap());
+ui->lbl_isCharging->setPixmap(QPixmap());
         ui->lbl_debug->setText(QStringLiteral("Battery: ") + QString::number(battery) + QStringLiteral("%"));
         ui->pbar_batteryinfo->setValue(battery);
+        m_batteryTimer->start(30000);
     }
 }
 
@@ -246,5 +346,33 @@ void atsx11::reloadSettingsUi()
     ui->sld_keyresptime->setValue(keyRespTime);
     ui->lbl_kreptimeValueDisplay->setText(QString::number(keyRespTime) + QStringLiteral(" ms"));
 
+    // Load DPI
+    const QVariantList dpiList = qSettings.value(
+        QStringLiteral("dpiValues"),
+        QVariantList{800, 1600, 2400, 3200, 5000, 22000}).toList();
+    const int dpiDefaults[6] = {800, 1600, 2400, 3200, 5000, 22000};
+    int dpi[6] = {};
+    for (int i = 0; i < 6; ++i)
+        dpi[i] = (i < dpiList.size()) ? dpiList[i].toInt() : dpiDefaults[i];
+    m_dpiBar->setValues(dpi);
+    const int activeStage = qSettings.value(
+        QStringLiteral("activeDpiStage"), 1).toInt();
+    m_dpiBar->setActiveStage(std::clamp(activeStage, 1, 6));
+
     updateInfoLabels();
+}
+
+void atsx11::onTrayRestoreRequested()
+{
+    show();
+    raise();
+    activateWindow();
+    refreshBattery();
+}
+
+void atsx11::onTrayQuitRequested()
+{
+    m_quitting = true;
+    close();
+    QCoreApplication::quit();
 }

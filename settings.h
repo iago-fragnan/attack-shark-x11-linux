@@ -27,6 +27,8 @@ private slots:
     void on_chbox_alldevices_checkStateChanged(const Qt::CheckState &arg1);
     void on_btn_applyProfilePreset_clicked();
     void on_buttonBox_accepted();
+    void on_chkbox_minimizeTray_toggled(bool checked);
+    void on_chkbox_autostartup_toggled(bool checked);
 
 private:
     void populateDevices(bool allDevices);

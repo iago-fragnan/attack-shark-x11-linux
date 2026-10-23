@@ -1,4 +1,5 @@
 #include "hook.h"
+#include "dpi.h"
 
 #include <cstdint>
 #include <unistd.h>
@@ -94,12 +95,18 @@ bool resolveUsbDevice(struct udev *udev, const QString &inputPath, UsbDevice &de
     return ok;
 }
 
-libusb_device_handle *openUsbDevice(libusb_context *ctx, const UsbDevice &device)
+libusb_device_handle *openUsbDevice(libusb_context *ctx, const UsbDevice &device, int *errorOut = nullptr)
 {
+    if (errorOut)
+        *errorOut = LIBUSB_SUCCESS;
+
     libusb_device **list = nullptr;
     const ssize_t count = libusb_get_device_list(ctx, &list);
-    if (count < 0)
+    if (count < 0) {
+        if (errorOut)
+            *errorOut = LIBUSB_ERROR_OTHER;
         return nullptr;
+    }
 
     libusb_device_handle *handle = nullptr;
 
@@ -116,9 +123,14 @@ libusb_device_handle *openUsbDevice(libusb_context *ctx, const UsbDevice &device
         if (desc.idVendor != device.vid || desc.idProduct != device.pid)
             continue;
 
-        if (libusb_open(entry, &handle) == 0)
+        const int rc = libusb_open(entry, &handle);
+        if (rc == 0)
             break;
 
+        // Remember why: LIBUSB_ERROR_ACCESS is a missing udev rule, which the
+        // user can act on, while NO_DEVICE just means it was unplugged.
+        if (errorOut && rc != LIBUSB_ERROR_NO_DEVICE && *errorOut == LIBUSB_SUCCESS)
+            *errorOut = rc;
         handle = nullptr;
     }
 
@@ -131,9 +143,10 @@ bool sendReport(
     const UsbDevice &device,
     uint16_t reportId,
     const uint8_t *data,
-    int length)
+    int length,
+    int *accessError = nullptr)
 {
-    libusb_device_handle *handle = openUsbDevice(ctx, device);
+    libusb_device_handle *handle = openUsbDevice(ctx, device, accessError);
     if (!handle)
         return false;
 
@@ -268,31 +281,38 @@ int applySettingsFromUser(
     int keyRespTime,
     int sleepTime,
     int deepSleepTime,
-    bool rippleControl)
+    bool rippleControl,
+    const int dpiValues[6],
+    int activeDpiStage)
 {
     if (colorMode < 0 || colorMode >= 4 || pollingRate < 0 || pollingRate >= 4)
-        return -1;
+        return kApplyInvalidSettings;
     if (sleepTime < 1 || sleepTime > 30)
-        return -1;
+        return kApplyInvalidSettings;
     if (deepSleepTime < 1 || deepSleepTime > 60)
-        return -1;
+        return kApplyInvalidSettings;
     if (keyRespTime < 4 || keyRespTime > 50 || keyRespTime % 2 != 0)
-        return -1;
+        return kApplyInvalidSettings;
+    for (int i = 0; i < 6; ++i)
+        if (dpiValues[i] < 50 || dpiValues[i] > 26000)
+            return kApplyInvalidSettings;
+    if (activeDpiStage < 1 || activeDpiStage > 6)
+        return kApplyInvalidSettings;
 
     struct udev *udev = udev_new();
     if (!udev)
-        return -2;
+        return kApplyNoUdev;
 
     UsbDevice device;
     if (!resolveUsbDevice(udev, devicePath, device)) {
         udev_unref(udev);
-        return -3;
+        return kApplyDeviceNotFound;
     }
     udev_unref(udev);
 
     libusb_context *ctx = nullptr;
     if (libusb_init(&ctx) != 0)
-        return -2;
+        return kApplyNoUdev;
 
     // Apply the polling rate
     const uint8_t pollingReport[9] = {
@@ -301,43 +321,116 @@ int applySettingsFromUser(
         POLLING_RATES[pollingRate][1],
         0x00, 0x00, 0x00, 0x00,
     };
-    const bool pollingOk = sendReport(ctx, device, 0x0306, pollingReport, sizeof(pollingReport));
+    int accessError = LIBUSB_SUCCESS;
+    const bool pollingOk = sendReport(ctx, device, 0x0306, pollingReport, sizeof(pollingReport), &accessError);
     usleep(kReportDelayUs);
 
     // Apply the LED color mode (with sleep timer, deep sleep timer, and debounce/key response time embedded)
     uint8_t colorReport[15];
     buildColorReport(colorMode, sleepTime, deepSleepTime, keyRespTime, colorReport);
-    const bool colorOk = sendReport(ctx, device, 0x0305, colorReport, sizeof(colorReport));
+    const bool colorOk = sendReport(ctx, device, 0x0305, colorReport, sizeof(colorReport), &accessError);
     usleep(kReportDelayUs);
 
-    // Apply the angle snap setting
-    uint8_t dpiReport[56] = {
-        0x04, 0x38, 0x01,
-        angleSnap ? 0x01 : 0x00,      // offset 3: Angle Snap
-        rippleControl ? 0x01 : 0x00,  // offset 4: Ripple Control
-        0x3f, 0x00, 0x00,
-        0x01,
-        0x25, 0x38, 0x4b, 0x75, 0x8d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x01, 0x00, 0x00,
-        0x02,
-        0xff, 0x00, 0x00, 0x00,
-        0xff, 0x00, 0x00, 0x00,
-        0xff, 0xff, 0xff, 0x00, 0x00,
-        0xff, 0xff, 0xff, 0x00,
-        0xff, 0xff, 0x40, 0x00,
-        0xff, 0xff, 0xff,
-        0x02, 0x0f,
-        0x34,
-        0x00, 0x00, 0x00, 0x00
-    };
-    const bool angleSnapOk = sendReport(ctx, device, 0x0304, dpiReport, sizeof(dpiReport));
+    // Apply DPI configuration (stages, active stage, angle snap, ripple control)
+    uint8_t dpiReport[56];
+    buildDpiReport(dpiValues, activeDpiStage, angleSnap, rippleControl, dpiReport);
+    const bool angleSnapOk = sendReport(ctx, device, 0x0304, dpiReport, sizeof(dpiReport), &accessError);
 
     libusb_exit(ctx);
-    return (pollingOk && colorOk && angleSnapOk) ? 0 : -5;
+
+    if (pollingOk && colorOk && angleSnapOk)
+        return kApplyOk;
+
+    // A refused open means the udev rule is not in place. That is the one
+    // failure the user can fix, so it gets its own code and its own message
+    // instead of being lumped in with every other transfer failure.
+    if (accessError == LIBUSB_ERROR_ACCESS)
+        return kApplyNoPermission;
+
+    return kApplyReportFailed;
+}
+
+QString describeAccessProblem(const QString &devicePath)
+{
+    struct udev *udev = udev_new();
+    if (!udev)
+        return QString();
+
+    UsbDevice device;
+    const bool resolved = resolveUsbDevice(udev, devicePath, device);
+    udev_unref(udev);
+    if (!resolved) {
+        return QObject::tr("The mouse is no longer connected. Plug it back in and try again.");
+    }
+
+    libusb_context *ctx = nullptr;
+    if (libusb_init(&ctx) != 0)
+        return QString();
+
+    int error = LIBUSB_SUCCESS;
+    libusb_device_handle *handle = openUsbDevice(ctx, device, &error);
+    if (handle) {
+        libusb_close(handle);
+        libusb_exit(ctx);
+        return QString();
+    }
+
+    const bool unplugged = (error == LIBUSB_ERROR_NO_DEVICE);
+    libusb_exit(ctx);
+
+    if (unplugged)
+        return QObject::tr("The mouse is no longer connected. Plug it back in and try again.");
+
+    return QObject::tr(
+        "This user does not have permission to write to the mouse, so it cannot be "
+        "configured without root.\n\n"
+        "Installing the application also installs a udev rule that grants access to "
+        "the user at the machine:\n\n"
+        "    sudo cmake --install <build-dir>\n\n"
+        "If the application was already installed, reload the rules with:\n\n"
+        "    sudo udevadm control --reload-rules && sudo udevadm trigger\n\n"
+        "and unplug the mouse and plug it back in. Running the application with sudo "
+        "works too, but gives it full access to the machine.");
 }
 
 
+namespace {
+
+constexpr uint8_t kPacketSig0   = 0x03;
+constexpr uint8_t kPacketSig1   = 0x55;
+constexpr uint8_t kPacketMsgBattery = 0x40;
+constexpr int     kMinPacketLen = 5;
+constexpr int     kMaxPercent   = 100;
+constexpr int     kBatteryNoData = -1;
+constexpr int     kBatteryCharging = -2;
+
+} // namespace
+
+// Byte 3 of the packet is the battery status, not part of the signature:
+// 0x01 NORMAL, 0x02 FULLY_CHARGED, 0x03 CHARGING_IN_PROGRESS. Byte 4 is the
+// percentage. The old check required byte 3 to equal 0x01, so every packet the
+// mouse actually sends was rejected and the reading never left the error state.
 // https://github.com/HarukaYamamoto0/attack-shark-x11-driver/blob/80fb0e69e59f2aa7185951622bcdadeb0bd4af0e/docs/battery-status.md
+BatteryInfo decodeBatteryPacket(const uint8_t *data, int len)
+{
+    BatteryInfo info;
+
+    if (!data || len < kMinPacketLen)
+        return info;
+    if (data[0] != kPacketSig0 || data[1] != kPacketSig1 || data[2] != kPacketMsgBattery)
+        return info;
+
+    const uint8_t status = data[3];
+    if (status != kBatteryStatusNormal
+        && status != kBatteryStatusFullyCharged
+        && status != kBatteryStatusCharging)
+        return info;
+
+    info.status = status;
+    info.percent = data[4] > kMaxPercent ? kMaxPercent : data[4];
+    return info;
+}
+
 int getBatteryInfo(const QString &devicePath)
 {
     constexpr uint8_t  kBatteryIface    = 2;
@@ -368,7 +461,7 @@ int getBatteryInfo(const QString &devicePath)
         return -1;
     }
 
-    int battery = -1; // -1 = error, -2 = charging (interface up but no wireless data)
+    int battery = kBatteryNoData; // -1 = no data, -2 = charging
 
     bool driverWasAttached = false;
     if (libusb_kernel_driver_active(handle, kBatteryIface) == 1) {
@@ -407,19 +500,17 @@ int getBatteryInfo(const QString &devicePath)
         if (rc != 0 && rc != LIBUSB_ERROR_TIMEOUT)
             break;
 
-        if (transferred >= kMinPacketLen &&
-            buf[0] == kSig0 &&
-            buf[1] == kSig1 &&
-            buf[2] == kSig2 &&
-            buf[3] == kSig3)
-        {
-            battery = static_cast<int>(buf[4]);
+        const BatteryInfo parsed = decodeBatteryPacket(buf, transferred);
+        if (parsed.valid()) {
+            battery = (parsed.status == kBatteryStatusCharging) ? kBatteryCharging
+                                                                : parsed.percent;
+            break;
         }
     }
 
-    if (battery < 0)
-        battery = -2;
-
+    // -2 is reserved for "actually charging". No battery packet at all is -1,
+    // which the window renders as "battery info unavailable" rather than
+    // claiming the mouse is charging when we simply did not hear from it.
     libusb_release_interface(handle, kBatteryIface);
     if (driverWasAttached)
         libusb_attach_kernel_driver(handle, kBatteryIface);

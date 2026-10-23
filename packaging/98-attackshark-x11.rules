@@ -1,0 +1,14 @@
+# Attack Shark X11 (1d57:fa55 wired, 1d57:fa60 2.4 GHz dongle).
+#
+# The application talks to the device through libusb, so it needs write access to
+# the usbfs node rather than to the hidraw node, which is why this matches the
+# usb subsystem.
+#
+# TAG+="uaccess" hands the device to the user sitting at the machine through
+# logind, so no group has to exist for this to work on any distribution.
+# MODE="0660" leaves the device unwritable for everyone else.
+#
+# Installed by `cmake --install`. Without this rule the application can only run
+# as root.
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d57", ATTR{idProduct}=="fa55", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d57", ATTR{idProduct}=="fa60", MODE="0660", TAG+="uaccess"

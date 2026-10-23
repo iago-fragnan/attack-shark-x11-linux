@@ -1,9 +1,11 @@
 #include "settings.h"
 #include "ui_settings.h"
+#include "autostart.h"
 #include "hook.h"
 #include <QMessageBox>
 #include <QSettings>
 #include <QStyle>
+#include <QVariant>
 
 namespace {
 constexpr auto kSettingsOrg = "AttackShark";
@@ -21,6 +23,18 @@ settings::settings(QWidget *parent)
     QSettings qSettings(kSettingsOrg, kSettingsApp);
     const bool allDevices  = qSettings.value(QStringLiteral("allDevices"), false).toBool();
     const QString savedPath = qSettings.value(QStringLiteral("devicePath")).toString();
+
+    const bool minToTray = qSettings.value(QStringLiteral("minToTray"), true).toBool();
+    const bool autostartEnabled =
+        qSettings.value(QStringLiteral("autostartEnabled"), false).toBool();
+
+    ui->chkbox_minimizeTray->blockSignals(true);
+    ui->chkbox_minimizeTray->setChecked(minToTray);
+    ui->chkbox_minimizeTray->blockSignals(false);
+
+    ui->chkbox_autostartup->blockSignals(true);
+    ui->chkbox_autostartup->setChecked(autostartEnabled);
+    ui->chkbox_autostartup->blockSignals(false);
 
     ui->chbox_alldevices->blockSignals(true);
     ui->chbox_alldevices->setChecked(allDevices);
@@ -99,6 +113,9 @@ void settings::on_btn_applyProfilePreset_clicked()
 
     const int colorMode = (p.colorMode >= 0) ? p.colorMode : 0;
 
+    int defaultDpi[6] = {800, 1600, 2400, 3200, 5000, 22000};
+    int activeStage = 1;
+
     const int result = applySettingsFromUser(
         devicePath,
         colorMode,
@@ -107,7 +124,9 @@ void settings::on_btn_applyProfilePreset_clicked()
         p.keyRespTime,
         p.sleepTime,
         p.deepSleepTime,
-        p.rippleControl);
+        p.rippleControl,
+        defaultDpi,
+        activeStage);
 
     if (result != 0) {
         QMessageBox::warning(this, QStringLiteral("Error"),
@@ -124,6 +143,13 @@ void settings::on_btn_applyProfilePreset_clicked()
     qSettings.setValue(QStringLiteral("deepSleepTime"), p.deepSleepTime);
     if (p.colorMode >= 0)
         qSettings.setValue(QStringLiteral("colorMode"), p.colorMode);
+
+    QVariantList dpiList;
+    for (int v : defaultDpi)
+        dpiList << v;
+    qSettings.setValue(QStringLiteral("dpiValues"), dpiList);
+    qSettings.setValue(QStringLiteral("activeDpiStage"), activeStage);
+
     qSettings.sync();
 
     emit profileApplied();
@@ -152,5 +178,29 @@ void settings::on_buttonBox_accepted()
     emit deviceSelected(devicePath);
 
     accept();
+}
+
+void settings::on_chkbox_minimizeTray_toggled(bool checked)
+{
+    QSettings qSettings(kSettingsOrg, kSettingsApp);
+    qSettings.setValue(QStringLiteral("minToTray"), checked);
+    qSettings.sync();
+}
+
+void settings::on_chkbox_autostartup_toggled(bool checked)
+{
+    if (!autostart::setEnabled(checked)) {
+        QMessageBox::warning(this, QStringLiteral("Error"),
+            QStringLiteral("Failed to update autostart entry: %1")
+                .arg(autostart::desktopFilePath()));
+        ui->chkbox_autostartup->blockSignals(true);
+        ui->chkbox_autostartup->setChecked(!checked);
+        ui->chkbox_autostartup->blockSignals(false);
+        return;
+    }
+
+    QSettings qSettings(kSettingsOrg, kSettingsApp);
+    qSettings.setValue(QStringLiteral("autostartEnabled"), checked);
+    qSettings.sync();
 }
 

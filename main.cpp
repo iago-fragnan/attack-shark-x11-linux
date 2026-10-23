@@ -5,11 +5,11 @@
 
 #include <QApplication>
 #include <QColor>
-#include <QMessageBox>
+#include <QLocalServer>
+#include <QLocalSocket>
 #include <QPalette>
-#include <QProcess>
-#include <QStandardPaths>
 #include <QStyleFactory>
+#include <QSystemTrayIcon>
 
 namespace {
 
@@ -93,78 +93,6 @@ void adoptDesktopUserEnvironment()
     }
 }
 
-QStringList guiSessionEnvironment()
-{
-    static const char *keys[] = {
-        "DISPLAY",
-        "XAUTHORITY",
-        "WAYLAND_DISPLAY",
-        "XDG_RUNTIME_DIR",
-        "DBUS_SESSION_BUS_ADDRESS",
-        "QT_QPA_PLATFORM",
-        "XDG_SESSION_TYPE",
-        "HOME",
-        "USER",
-        "LOGNAME",
-        "XDG_CONFIG_HOME",
-        "XDG_DATA_HOME",
-        "XDG_CACHE_HOME",
-        "XDG_DATA_DIRS",
-    };
-
-    QStringList env;
-    for (const char *key : keys) {
-        const QByteArray value = qgetenv(key);
-        if (!value.isEmpty())
-            env << QStringLiteral("%1=%2").arg(key, QString::fromLocal8Bit(value));
-    }
-    return env;
-}
-
-bool startElevated(const QString &program, const QStringList &arguments)
-{
-    QStringList args;
-    args << QStringLiteral("env") << guiSessionEnvironment() << program << arguments;
-    return QProcess::startDetached(QStringLiteral("pkexec"), args);
-}
-
-bool requestElevatedRestart()
-{
-    const QMessageBox::StandardButton reply = QMessageBox::question(
-        nullptr,
-        QObject::tr("Administrator privileges required"),
-        QObject::tr(
-            "This application needs root access to configure USB devices.\n\n"
-            "Restart with elevated privileges?"),
-        QMessageBox::Yes | QMessageBox::No,
-        QMessageBox::Yes);
-
-    if (reply != QMessageBox::Yes)
-        return false;
-
-    const QString appPath = QCoreApplication::applicationFilePath();
-    const QStringList appArgs = QCoreApplication::arguments().mid(1);
-
-    if (startElevated(appPath, appArgs))
-        return true;
-
-    const QString kdesu = QStandardPaths::findExecutable(QStringLiteral("kdesu"));
-    if (!kdesu.isEmpty()) {
-        QStringList kdesuArgs;
-        kdesuArgs << appPath << appArgs;
-        if (QProcess::startDetached(kdesu, kdesuArgs))
-            return true;
-    }
-
-    QMessageBox::critical(
-        nullptr,
-        QObject::tr("Elevation failed"),
-        QObject::tr(
-            "Could not restart with elevated privileges.\n"
-            "Try running the application with sudo instead."));
-    return false;
-}
-
 } // namespace
 
 int main(int argc, char *argv[])
@@ -174,13 +102,41 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     applyDarkTheme(a);
 
-    if (geteuid() != 0) {
-        if (requestElevatedRestart())
-            return 0;
-        return 1;
+    const QString serverName = QStringLiteral("attackshark-x11-")
+        + QString::number(getuid());
+
+    QLocalSocket probe;
+    probe.connectToServer(serverName);
+    if (probe.waitForConnected(200) || probe.state() == QLocalSocket::ConnectedState) {
+        probe.write("show");
+        probe.flush();
+        probe.waitForBytesWritten(200);
+        return 0;
     }
 
+    QLocalServer server;
+    QLocalServer::removeServer(serverName);
+    if (!server.listen(serverName))
+        return 0;
+
     atsx11 w;
-    w.show();
+
+    QObject::connect(&server, &QLocalServer::newConnection, &w,
+        [&server, &w] {
+            QLocalSocket *client = server.nextPendingConnection();
+            if (!client)
+                return;
+            client->deleteLater();
+            w.show();
+            w.raise();
+            w.activateWindow();
+        });
+
+    const QStringList args = QCoreApplication::arguments();
+    const bool startHidden = args.contains(QStringLiteral("--hidden"))
+        && QSystemTrayIcon::isSystemTrayAvailable();
+    if (!startHidden)
+        w.show();
+
     return a.exec();
 }
