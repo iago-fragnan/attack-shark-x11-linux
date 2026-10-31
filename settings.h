@@ -1,9 +1,10 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
+#include "core/types.h"
+
 #include <QDialog>
 #include <QList>
-#include <QPair>
 #include <QString>
 
 namespace Ui {
@@ -16,7 +17,7 @@ class settings : public QDialog
 
 public:
     explicit settings(QWidget *parent = nullptr);
-    ~settings();
+    ~settings() override;
 
 signals:
     void deviceSelected(const QString &devicePath);
@@ -32,7 +33,7 @@ private:
     void populateDevices(bool allDevices);
 
     Ui::settings *ui;
-    QList<QPair<QString, QString>> devicesConnected;
+    QList<attackshark::DeviceInfo> m_devicesConnected;
 };
 
 #endif // SETTINGS_H

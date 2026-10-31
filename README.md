@@ -38,6 +38,12 @@ sudo dpkg -i attackshark-x11.deb
 ```
 
 
+## Documentation
+
+Detailed technical documentation and reverse engineering reports are available in the [`docs/`](docs/) directory:
+- [Reverse Engineering Report](docs/REVERSE_ENGINEERING.md): Comprehensive analysis of the official Windows driver (`AttackShark.exe` / `hiddriver_3.dll`), assembly disassembly snippets, hardware ACK packets, battery ADC steps, and physical button sync.
+- [HID Protocol Reference](docs/PROTOCOL.md): Low-level 64-byte Feature Report layouts, 16-bit Big-Endian checksum calculations, PAW3311 step tables, and asynchronous Input Reports.
+
 ## TODO
 
 - [x] Polling Rate
