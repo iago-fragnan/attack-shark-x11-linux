@@ -70,5 +70,5 @@ Detailed technical documentation and reverse engineering reports are available i
 
 - Lightning and Settings icons provided by [Flaticon](https://www.flaticon.com/).
 - Additional Reverse engineering references from [HarukaYamamoto0](https://github.com/HarukaYamamoto0/attack-shark-x11-driver/).
-- Contributors
-- You, for reading this
+- Contributors.
+- You, for reading this.
