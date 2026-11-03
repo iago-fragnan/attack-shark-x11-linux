@@ -1,21 +1,20 @@
-# Documentazione Tecnica Attack Shark X11 Linux
+# Attack Shark X11 Linux Technical Documentation
 
-Questa directory raccoglie la documentazione tecnica e i risultati dell'attività di reverse engineering condotta sul mouse da gioco **Attack Shark X11** e sul relativo software ufficiale Windows.
+This directory collects the technical documentation and the results of the reverse engineering activity conducted on the **Attack Shark X11** gaming mouse and its official Windows software.
 
 ---
 
-## Indice dei Documenti
+## Document Index
 
 1. **[REVERSE_ENGINEERING.md](file:///var/home/simone/GitHub/attack-shark-x11-linux/docs/REVERSE_ENGINEERING.md)**:
-   * Relazione completa sull'analisi dei binari ufficiali (`AttackShark.exe` e `hiddriver_3.dll`).
-   * Spiegazione dettagliata con frammenti di codice assembly (disassembly x86) del dispatcher dei comandi.
-   * Diagnosi e risoluzione dei bug storici (errore ACK `03 10 50 01 04`, tabelle sensore PAW3311, checksum a 16 bit).
-   * Spiegazione dell'ADC batteria a intervalli discreti del 10% e della sincronizzazione hardware del tasto DPI.
-   * Gestione dell'architettura dual-mode (cablata `1d57:fa61` con spegnimento modulo radio vs wireless `1d57:fa60`).
+   * Complete report on the analysis of the official binaries (`AttackShark.exe` and `hiddriver_3.dll`).
+   * Detailed explanation with assembly code snippets (x86 disassembly) of the command dispatcher.
+   * Diagnosis and resolution of historical bugs (ACK error `03 10 50 01 04`, PAW3311 sensor tables, 16-bit checksum).
+   * Explanation of the battery ADC with discrete 10% intervals and hardware synchronization of the DPI button.
+   * Management of the dual-mode architecture (wired `1d57:fa61` with radio module off vs wireless `1d57:fa60`).
 
 2. **[PROTOCOL.md](file:///var/home/simone/GitHub/attack-shark-x11-linux/docs/PROTOCOL.md)**:
-   * Riferimento rapido per sviluppatori sul protocollo USB HID a basso livello.
-   * Layout esatto dei pacchetti Feature Report a 64 byte (`Report 0x04` DPI, `Report 0x05` RGB, `Report 0x06` Polling Rate).
-   * Formato degli Interrupt Input Report asincroni (ACK, tasto DPI fisico, telemetria batteria).
-   * Algoritmi di checksum e tabelle di conversione hardware.
-
+   * Quick reference for developers on the low-level USB HID protocol.
+   * Exact layout of the 64-byte Feature Report packets (`Report 0x04` DPI, `Report 0x05` RGB, `Report 0x06` Polling Rate).
+   * Format of the asynchronous Interrupt Input Reports (ACK, physical DPI button, battery telemetry).
+   * Checksum algorithms and hardware conversion tables.

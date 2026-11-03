@@ -1,248 +1,248 @@
-# Relazione Tecnica di Reverse Engineering: Attack Shark X11
+# Technical Reverse Engineering Report: Attack Shark X11
 
-**Target Hardware**: Gaming Mouse Attack Shark X11 (Sensore PixArt PAW3311 / Controller Beken BK2535/BK52832)  
-**Target Software Originale**: `ATTACK SHARK X11 SOFT.exe` (Versione Windows ufficiale)  
-**Ambiente di Analisi**: Linux (Distrobox Ubuntu 26.04 LTS su host Bazzite / Fedora Atomic)  
-**Autore**: Progetto `attack-shark-x11-linux`
-
----
-
-## 1. Obiettivo dell'Analisi
-
-Il software ufficiale fornito dal produttore per il mouse gaming **Attack Shark X11** è disponibile esclusivamente come applicazione Win32. Il tentativo iniziale di implementare un driver Linux nativo basato sul reverse engineering amatoriale (`hook.cpp`) presentava gravi problemi:
-1. **Mancata applicazione dei profili e dei DPI**: Il mouse rifiutava sistematicamente i comandi, lasciando la sensibilità inalterata anche dopo aver premuto "Apply".
-2. **Lettura errata della batteria**: L'interfaccia segnalava valori incoerenti (es. 10% fisso, oppure 100% senza alcuna variazione percepibile) e non riconosceva lo stato di carica/scarica.
-3. **Mancata sincronizzazione del pulsante DPI fisico**: Premendo il pulsante hardware sul mouse per ciclare tra i profili di sensibilità, il software Linux non ne era a conoscenza e non aggiornava lo stato visivo della GUI.
-4. **Mancata gestione della modalità mista Cavo / Wireless 2.4G**: Il mouse quando collegato via cavo USB per la ricarica cambia Product ID USB e disattiva la radio 2.4G, bloccando la comunicazione con il dongle.
-
-Per risolvere definitivamente queste criticità, è stata condotta un'analisi approfondita di reverse engineering statico e dinamico sul pacchetto ufficiale Windows fornito da Attack Shark.
+**Target Hardware**: Attack Shark X11 Gaming Mouse (PixArt PAW3311 Sensor / Beken BK2535/BK52832 Controller)  
+**Original Target Software**: `ATTACK SHARK X11 SOFT.exe` (Official Windows Version)  
+**Analysis Environment**: Linux (Distrobox Ubuntu 26.04 LTS on Bazzite / Fedora Atomic host)  
+**Author**: `attack-shark-x11-linux` Project
 
 ---
 
-## 2. Metodologia e Strumenti Utilizzati
+## 1. Objective of the Analysis
 
-### 2.1 Estrazione del Pacchetto di Installazione
-L'eseguibile ufficiale `ATTACK SHARK X11 SOFT.exe` è un archivio compresso generato tramite **Inno Setup**. È stato estratto utilizzando l'utility `innoextract`:
+The official software provided by the manufacturer for the **Attack Shark X11** gaming mouse is available exclusively as a Win32 application. The initial attempt to implement a native Linux driver based on amateur reverse engineering (`hook.cpp`) had serious problems:
+1. **Profiles and DPI not applied**: The mouse systematically rejected the commands, leaving the sensitivity unchanged even after pressing "Apply".
+2. **Incorrect battery reading**: The interface reported inconsistent values (e.g., a fixed 10%, or 100% with no noticeable variation) and did not recognize the charging/discharging state.
+3. **No synchronization of the physical DPI button**: When pressing the hardware button on the mouse to cycle through sensitivity profiles, the Linux software was unaware of it and did not update the visual state of the GUI.
+4. **No handling of mixed Wired / Wireless 2.4G mode**: When the mouse is connected via USB cable for charging, it changes its USB Product ID and disables the 2.4G radio, blocking communication with the dongle.
+
+To definitively resolve these issues, an in-depth static and dynamic reverse engineering analysis was conducted on the official Windows package provided by Attack Shark.
+
+---
+
+## 2. Methodology and Tools Used
+
+### 2.1 Extraction of the Installation Package
+The official executable `ATTACK SHARK X11 SOFT.exe` is a compressed archive generated with **Inno Setup**. It was extracted using the `innoextract` utility:
 ```bash
 innoextract -d /tmp/attack_shark_official "ATTACK SHARK X11 SOFT.exe"
 ```
-L'estrazione ha rivelato l'alberatura completa dell'applicazione:
-* `AttackShark.exe`: Binario principale Win32 (sviluppato in C++ con framework grafico DirectUI / DuiLib).
-* `hiddriver_*.dll`: Suite di driver di interfaccia HID a basso livello (`hiddriver_1.dll` ... `hiddriver_18.dll`).
-* `res/MS/`: Definizioni grafiche e vincoli funzionali XML suddivisi per modello (`MS_1` .. `MS_18`).
-* `res/MS/MS_3/`: Directory associata nello specifico all'Attack Shark X11.
+The extraction revealed the complete application tree:
+* `AttackShark.exe`: Main Win32 binary (developed in C++ with the DirectUI / DuiLib graphical framework).
+* `hiddriver_*.dll`: Suite of low-level HID interface drivers (`hiddriver_1.dll` ... `hiddriver_18.dll`).
+* `res/MS/`: Graphical definitions and XML functional constraints divided by model (`MS_1` .. `MS_18`).
+* `res/MS/MS_3/`: Directory specifically associated with the Attack Shark X11.
 
-### 2.2 Strumenti di Analisi dei Binari
-* `objdump -M intel -D`: Disassemblaggio x86 a 32 bit delle sezioni di codice (`.text`) e delle tabelle di importazione/esportazione (`.rdata`, `.edata`, `.idata`).
-* `readelf` / `hexdump`: Analisi dell'header PE, calcolo degli RVA (Relative Virtual Address) e mappatura dei file offset.
-* Script Python di introspezione binaria per la localizzazione di costanti hardware, firme di pacchetti HID e chiamate API Windows (`HidD_SetFeature`, `HidD_GetFeature`, `ReadFile`, `WriteFile`, `SetTimer`, `CProgressUI::SetValue`).
-* Tracciamento live dei report USB HID tramite `ioctl(HIDIOCSFEATURE)` e lettura non bloccante su nodi `/dev/hidraw*`.
+### 2.2 Binary Analysis Tools
+* `objdump -M intel -D`: 32-bit x86 disassembly of code sections (`.text`) and import/export tables (`.rdata`, `.edata`, `.idata`).
+* `readelf` / `hexdump`: PE header analysis, RVA (Relative Virtual Address) computation, and mapping of file offsets.
+* Python binary introspection script to locate hardware constants, HID packet signatures, and Windows API calls (`HidD_SetFeature`, `HidD_GetFeature`, `ReadFile`, `WriteFile`, `SetTimer`, `CProgressUI::SetValue`).
+* Live tracing of USB HID reports via `ioctl(HIDIOCSFEATURE)` and non-blocking reads on `/dev/hidraw*` nodes.
 
 ---
 
-## 3. Identificazione del Dispositivo e Architettura USB HID
+## 3. Device Identification and USB HID Architecture
 
-### 3.1 Identificativi USB (VID / PID)
-Dall'analisi di `AttackShark.exe` e dal riscontro sul bus USB tramite `sysfs`:
+### 3.1 USB Identifiers (VID / PID)
+From the analysis of `AttackShark.exe` and the USB bus feedback via `sysfs`:
 * **Vendor ID**: `0x1D57` (Beken Corporation).
-* **Product ID Modalità Wireless (Dongle 2.4G)**: `0xFA60` (`Beken 2.4G Wireless Device`).
-* **Product ID Modalità Cablata (Cavo USB / Ricarica)**: `0xFA61` (`Beken USB Gaming Mouse`).
+* **Product ID Wireless Mode (2.4G Dongle)**: `0xFA60` (`Beken 2.4G Wireless Device`).
+* **Product ID Wired Mode (USB Cable / Charging)**: `0xFA61` (`Beken USB Gaming Mouse`).
 
 > [!NOTE]
-> Il vecchio codice cercava erroneamente `0xfa55` per la modalità cablata. In realtà l'Attack Shark X11 quando viene inserito il cavo USB espone l'ID **`0xfa61`**.
+> The old code incorrectly looked for `0xfa55` for wired mode. In reality, the Attack Shark X11 exposes the ID **`0xfa61`** when the USB cable is plugged in.
 
-### 3.2 Mappatura delle Interfacce USB
-Il ricevitore USB e il mouse cablato espongono 4 interfacce HID:
-* `Interface 0` (`input0`): Cursore mouse standard (report X/Y, click tasti sinistro/destro/centrale/laterali, rotella).
-* `Interface 1` (`input1`): Tasti consumer/multimediali e scorciatoie tastiera.
-* **`Interface 2` (`input2`, config)**: **Interfaccia proprietaria vendor**. È l'unico endpoint abilitato alla ricezione di Feature Report di configurazione e alla trasmissione di report asincroni di telemetria e notifiche hardware.
-* `Interface 3` (`input3`): Interfaccia diagnostica/firmware update.
+### 3.2 USB Interface Mapping
+The USB receiver and the wired mouse expose 4 HID interfaces:
+* `Interface 0` (`input0`): Standard mouse cursor (X/Y report, left/right/middle/side button clicks, wheel).
+* `Interface 1` (`input1`): Consumer/multimedia keys and keyboard shortcuts.
+* **`Interface 2` (`input2`, config)**: **Proprietary vendor interface**. It is the only endpoint enabled to receive configuration Feature Reports and to transmit asynchronous telemetry and hardware notification reports.
+* `Interface 3` (`input3`): Diagnostic/firmware update interface.
 
-Il driver deve quindi aprire esclusivamente il nodo `/dev/hidraw*` associato a **`bInterfaceNumber == 2`**.
+The driver must therefore open exclusively the `/dev/hidraw*` node associated with **`bInterfaceNumber == 2`**.
 
 ---
 
-## 4. Reverse Engineering del Protocollo DPI (Report `0x04`)
+## 4. Reverse Engineering of the DPI Protocol (Report `0x04`)
 
-### 4.1 La Causa del Rifiuto dei Pacchetti (`03 10 50 01 04`)
-Nel codice legacy `hook.cpp`, qualsiasi modifica DPI veniva ignorata dal cursore.
-Monitorando le risposte hardware, il mouse rispondeva con:
+### 4.1 The Cause of Packet Rejection (`03 10 50 01 04`)
+In the legacy `hook.cpp` code, any DPI change was ignored by the cursor.
+By monitoring the hardware responses, the mouse replied with:
 ```
 03 10 50 01 04
 ```
-Nel protocollo Beken:
+In the Beken protocol:
 * `buf[0] == 0x03`: Report ID 3 (ACK/Response).
 * `buf[1] == 0x10`: Vendor Command.
-* `buf[2] == 0x50`: Tipo pacchetto = Acknowledgement.
-* `buf[3] == 0x01`: **STATUS = ERRORE / RIFIUTATO**.
-* `buf[4] == 0x04`: Report ID a cui si riferisce l'ACK (Report DPI `0x04`).
+* `buf[2] == 0x50`: Packet type = Acknowledgement.
+* `buf[3] == 0x01`: **STATUS = ERROR / REJECTED**.
+* `buf[4] == 0x04`: Report ID to which the ACK refers (DPI Report `0x04`).
 
-Dall'analisi del disassembly di `AttackShark.exe` (routine costruttrice del pacchetto DPI), sono emersi **tre errori strutturali** nel pacchetto inviato dal codice originale:
+From the analysis of the `AttackShark.exe` disassembly (DPI packet builder routine), **three structural errors** emerged in the packet sent by the original code:
 
-### 4.2 Struttura Reale del Pacchetto DPI (`Report 0x04`, 64 Byte)
+### 4.2 Actual Structure of the DPI Packet (`Report 0x04`, 64 Bytes)
 
-| Byte Offset | Valore / Funzione | Descrizione |
+| Byte Offset | Value / Function | Description |
 |---|---|---|
-| `0` | `0x04` | Feature Report ID (Configurazione DPI) |
-| `1` | `0x09` o `0x10` | Sotto-comando / Vendor prefix |
-| `2` | `0x01` | Modalità configurazione sensore |
-| `3` | `0x05` | Numero totale di stage DPI configurati (default: 5) |
-| `4..5` | `0x00, 0x00` | Riservato / Allineamento |
-| `6..7` | Bitmask | Flag per DPI estesi (> 12.000 DPI) |
-| **`8..13`** | **Valori codificati DPI** | **Byte di codifica dei 5 stage DPI (`stage 0..4`)** |
+| `0` | `0x04` | Feature Report ID (DPI Configuration) |
+| `1` | `0x09` or `0x10` | Sub-command / Vendor prefix |
+| `2` | `0x01` | Sensor configuration mode |
+| `3` | `0x05` | Total number of configured DPI stages (default: 5) |
+| `4..5` | `0x00, 0x00` | Reserved / Alignment |
+| `6..7` | Bitmask | Flags for extended DPI (> 12,000 DPI) |
+| **`8..13`** | **Encoded DPI values** | **Encoding bytes for the 5 DPI stages (`stage 0..4`)** |
 | `14..15` | `0x00, 0x00` | Padding |
-| `16..21` | Flag High-Stage | Flag specifici per intervalli 10.100–12.000 e 20.100–22.000 DPI |
+| `16..21` | High-Stage Flags | Specific flags for the 10,100–12,000 and 20,100–22,000 DPI ranges |
 | `22..23` | `0x00, 0x00` | Padding |
-| **`24`** | **Stage Attivo (`1..5`)** | **Indice (1-based) dello stage DPI attualmente selezionato** |
-| `25..49` | `0x00` ... | Parametri avanzati sensore (LOD, ripple control, angle snapping) |
-| **`50..51`** | **Checksum Big-Endian (16 bit)** | **Somma a 16 bit calcolata sui byte `3..49` inclusi** |
-| `52..63` | `0x00` ... | Padding a 64 byte |
+| **`24`** | **Active Stage (`1..5`)** | **1-based index of the currently selected DPI stage** |
+| `25..49` | `0x00` ... | Advanced sensor parameters (LOD, ripple control, angle snapping) |
+| **`50..51`** | **Big-Endian Checksum (16 bit)** | **16-bit sum computed over bytes `3..49` inclusive** |
+| `52..63` | `0x00` ... | Padding to 64 bytes |
 
-#### Errori corretti rispetto al codice precedente:
-1. **Posizione errata dei byte DPI**: Il vecchio codice inseriva lo stage attivo al byte `8` e i valori DPI ai byte `9..13`. Il firmware del mouse esige invece i valori DPI a partire dall'**offset `8`** e lo stage attivo all'**offset `24`**.
-2. **Formula lineare inesistente**: Il sensore PixArt PAW3311 non usa una formula matematica `(DPI / 50) + 1`. Utilizza una tabella di calibrazione hardware non-lineare (`kDpiStepTable`), dove ad esempio:
+#### Errors corrected compared to the previous code:
+1. **Wrong position of the DPI bytes**: The old code placed the active stage at byte `8` and the DPI values at bytes `9..13`. The mouse firmware, however, requires the DPI values starting at **offset `8`** and the active stage at **offset `24`**.
+2. **Non-existent linear formula**: The PixArt PAW3311 sensor does not use a mathematical formula `(DPI / 50) + 1`. It uses a non-linear hardware calibration table (`kDpiStepTable`), where for example:
    * 400 DPI = `0x09`
    * 800 DPI = `0x12`
    * 1600 DPI = `0x25`
    * 10000 DPI = `0xEB`
-3. **Checksum Big-Endian a 16 bit**: Il firmware convalida l'integrità del pacchetto calcolando la somma aritmetica a 16 bit dei byte da `3` a `49`. Se la somma nei byte `50` e `51` non corrisponde esattamente a `(sum >> 8) & 0xFF` e `sum & 0xFF`, il comando viene scartato con status `0x01`.
+3. **16-bit Big-Endian checksum**: The firmware validates packet integrity by computing the 16-bit arithmetic sum of bytes `3` through `49`. If the sum in bytes `50` and `51` does not exactly match `(sum >> 8) & 0xFF` and `sum & 0xFF`, the command is discarded with status `0x01`.
 
-Applicando la struttura corretta e il checksum dinamico, il mouse risponde immediatamente:
+By applying the correct structure and the dynamic checksum, the mouse responds immediately:
 ```
 03 10 50 00 04
 ```
-dove `0x00` indica **SUCCESSO / COMANDO ACCETTATO**. La sensibilità del sensore cambia istantaneamente.
+where `0x00` indicates **SUCCESS / COMMAND ACCEPTED**. The sensor sensitivity changes instantly.
 
 ---
 
-## 5. Reverse Engineering delle Notifiche Hardware Asincrone (Interrupt In)
+## 5. Reverse Engineering of Asynchronous Hardware Notifications (Interrupt In)
 
-Aprendo il file descriptor di `/dev/hidraw*` in modalità non bloccante con un loop basato su `QSocketNotifier` o `poll()`, il mouse trasmette autonomamente pacchetti asincroni senza bisogno di polling attivo.
+By opening the `/dev/hidraw*` file descriptor in non-blocking mode with a loop based on `QSocketNotifier` or `poll()`, the mouse autonomously transmits asynchronous packets without the need for active polling.
 
-### 5.1 Notifica Pressione Tasto DPI Fisico (`0x1010`)
-Quando l'utente preme il pulsante DPI fisico posizionato dietro la rotella o sul fondo del mouse, il dispositivo trasmette sul canale di interrupt un pacchetto con la seguente firma:
+### 5.1 Physical DPI Button Press Notification (`0x1010`)
+When the user presses the physical DPI button located behind the wheel or on the bottom of the mouse, the device transmits a packet on the interrupt channel with the following signature:
 ```
 [0x03, 0x10, 0x10, <stage_1_based>, 0x00]
 ```
-Nel binario `AttackShark.exe`, la routine del dispatcher principale al VMA `0x00496710` gestisce questo evento:
+In the `AttackShark.exe` binary, the main dispatcher routine at VMA `0x00496710` handles this event:
 ```x86asm
 496719: cmp    al, 0x10                ; buf[1] == 0x10 (Vendor Prefix)
-496721: and    eax, 0xff00             ; Maschera secondo byte di comando
-496727: cmp    eax, 0x1000             ; buf[2] == 0x10 (Evento DPI switch)
+496721: and    eax, 0xff00             ; Mask the second command byte
+496727: cmp    eax, 0x1000             ; buf[2] == 0x10 (DPI switch event)
 49672c: jne    0x496782
-49672e: mov    esi, DWORD PTR [ebp+0xc] ; esi = stage ricevuto (1-based: 1..8)
+49672e: mov    esi, DWORD PTR [ebp+0xc] ; esi = received stage (1-based: 1..8)
 496731: lea    eax, [esi-1]
-496734: cmp    eax, 7                  ; Limite massimo 8 stage
+496734: cmp    eax, 7                  ; Maximum limit of 8 stages
 496737: ja     0x496859
-496743: dec    esi                     ; esi = stage - 1 (conversione in 0-based)
+496743: dec    esi                     ; esi = stage - 1 (conversion to 0-based)
 496744: push   0
 496746: push   1                       ; SetSelected(true)
-49674e: mov    ecx, [edi+esi*4+0x2e4]  ; Puntatore al CControlUI del radio button stage
+49674e: mov    ecx, [edi+esi*4+0x2e4]  ; Pointer to the CControlUI of the stage radio button
 496755: mov    eax, [ecx]
-496757: call   [eax+0x1c0]             ; Invoca OptionUI::Selected(true)
-496763: push   [eax+esi*4+0x8c4]       ; Valore numerico DPI corrispondente allo stage
+496757: call   [eax+0x1c0]             ; Invokes OptionUI::Selected(true)
+496763: push   [eax+esi*4+0x8c4]       ; Numeric DPI value corresponding to the stage
 49676a: push   2
-49676c: push   0x50b                   ; Messaggio interno WM_APP: Notifica toast DPI
+49676c: push   0x50b                   ; Internal WM_APP message: DPI toast notification
 496771: push   [edi+0x168]
-496777: call   PostMessageW            ; Aggiorna l'interfaccia utente
+496777: call   PostMessageW            ; Updates the user interface
 ```
 
-#### Replicazione nel driver Linux:
-In [`AttackSharkDevice::parseIncomingReport`](file:///var/home/simone/GitHub/attack-shark-x11-linux/device/attackshark_device.cpp#L332-L345), quando arrivano i byte `0x03, 0x10, 0x10, stage`:
-1. Viene calcolato l'indice 0-based `stageIndex = stage1Based - 1`.
-2. Viene emesso il segnale Qt `activeDpiStageChanged(stageIndex)`.
-3. In [`atsx11::onHardwareDpiStageChanged`](file:///var/home/simone/GitHub/attack-shark-x11-linux/atsx11.cpp#L195-L215), il radio button dello stage corrispondente viene spuntato via software e viene mostrata una notifica nella status bar con il valore DPI effettivo.
+#### Replication in the Linux driver:
+In [`AttackSharkDevice::parseIncomingReport`](file:///var/home/simone/GitHub/attack-shark-x11-linux/device/attackshark_device.cpp#L332-L345), when the bytes `0x03, 0x10, 0x10, stage` arrive:
+1. The 0-based index `stageIndex = stage1Based - 1` is computed.
+2. The Qt signal `activeDpiStageChanged(stageIndex)` is emitted.
+3. In [`atsx11::onHardwareDpiStageChanged`](file:///var/home/simone/GitHub/attack-shark-x11-linux/atsx11.cpp#L195-L215), the radio button for the corresponding stage is checked via software and a notification is shown in the status bar with the actual DPI value.
 
 ---
 
-### 5.2 Telemetria Batteria e Logica di Carica (`0x1040`)
-Il report di stato della batteria trasmesso dal chip Beken ha la struttura:
+### 5.2 Battery Telemetry and Charging Logic (`0x1040`)
+The battery status report transmitted by the Beken chip has the following structure:
 ```
 [0x03, 0x10, 0x40, <state>, <level>]
 ```
-Analizzando il disassemblato di `AttackShark.exe` alle funzioni `0x00496800` (gestore del report) e `0x00486210` (aggiornamento interfaccia percentuale):
+Analyzing the `AttackShark.exe` disassembly at functions `0x00496800` (report handler) and `0x00486210` (percentage interface update):
 
 ```x86asm
-; Analisi stato (state = buf[3])
-49681b: cmp    ebx, 0x2                ; ebx == 0x02 ? (Stato: In Carica)
+; State analysis (state = buf[3])
+49681b: cmp    ebx, 0x2                ; ebx == 0x02 ? (State: Charging)
 49681e: jne    0x49685f
-496820: call   KillTimer(0x223)        ; Riavvia timer animazione
-496832: push   0xa                     ; Forza visualizzazione al 100% durante l'animazione
+496820: call   KillTimer(0x223)        ; Restart animation timer
+496832: push   0xa                     ; Force display to 100% during animation
 496836: call   0x486210
-49687c: call   SetTimer(0x223, 30ms)   ; Avvia timer a 30ms per far scorrere la barra verde
+49687c: call   SetTimer(0x223, 30ms)   ; Start a 30 ms timer to make the green bar scroll
 
-; Analisi livello normale in scarica (level = buf[4])
-49690d: cmp    esi, 0xa                ; esi = livello (0x00..0x0a)
-496910: ja     0x496920                ; Se > 10 scarta pacchetto errato
-496912: push   esi                     ; Passa il livello alla funzione di rendering
+; Normal level analysis while discharging (level = buf[4])
+49690d: cmp    esi, 0xa                ; esi = level (0x00..0x0a)
+496910: ja     0x496920                ; If > 10 discard erroneous packet
+496912: push   esi                     ; Pass the level to the rendering function
 49691b: call   0x00486210
 
-; Routine di conversione livello -> percentuale (0x00486210):
+; Level -> percentage conversion routine (0x00486210):
 48623f: mov    eax, [ebp+0x8]          ; eax = level (1..10)
-486242: mov    ecx, [edi+0x39c]        ; ecx = Puntatore a CProgressUI
+486242: mov    ecx, [edi+0x39c]        ; ecx = Pointer to CProgressUI
 486248: lea    esi, [eax+eax*4]        ; esi = level * 5
 48624b: add    esi, esi                ; esi = (level * 5) * 2 = level * 10
-48624d: push   esi                     ; push percentuale (es. 10 * 10 = 100)
-48624e: call   CProgressUI::SetValue   ; Imposta valore progress bar
-48627b: push   0x4f3090                ; Stringa di formato L"%d%%"
-486281: call   CDuiString::Format      ; Genera il testo "%d%"
+48624d: push   esi                     ; push percentage (e.g., 10 * 10 = 100)
+48624e: call   CProgressUI::SetValue   ; Sets the progress bar value
+48627b: push   0x4f3090                ; L"%d%%" format string
+486281: call   CDuiString::Format      ; Generates the text "%d%"
 ```
 
-#### Risoluzione del comportamento "Segna 100% e non scende":
-1. **Granularità hardware al 10%**: Il convertitore ADC interno del controller wireless Beken non invia letture continue all'1%. Suddivide l'intervallo di scarica della batteria Li-Po (4.2V $\rightarrow$ 3.5V) in **10 intervalli discreti da 10% ciascuno** (`0x01` = 10%, `0x02` = 20%, ..., `0x0a` = 100%).
-2. **Conferma dal vivo**: Interrogando l'hardware reale collegato alla macchina:
+#### Resolution of the "Shows 100% and does not drop" behavior:
+1. **10% hardware granularity**: The internal ADC converter of the Beken wireless controller does not send continuous 1% readings. It divides the discharge range of the Li-Po battery (4.2V $\rightarrow$ 3.5V) into **10 discrete intervals of 10% each** (`0x01` = 10%, `0x02` = 20%, ..., `0x0a` = 100%).
+2. **Live confirmation**: By querying the real hardware connected to the machine:
    ```
-   Dati ricevuti da /dev/hidraw7: 03 10 40 01 0a
+   Data received from /dev/hidraw7: 03 10 40 01 0a
    ```
-   * `buf[3] == 0x01`: Discharging (il mouse non è collegato al cavo né sulla dock).
-   * `buf[4] == 0x0a`: Livello 10 $\rightarrow$ $10 \times 10\% = 100\%$.
-   La batteria era effettivamente carica al 100%. Rimane a tale valore finché l'uso prolungato non riduce la tensione della cella al di sotto della soglia dei 90%, momento in cui il pacchetto conterrà `0x09` (90%).
+   * `buf[3] == 0x01`: Discharging (the mouse is not connected to the cable or the dock).
+   * `buf[4] == 0x0a`: Level 10 $\rightarrow$ $10 \times 10\% = 100\%$.
+   The battery was indeed fully charged at 100%. It stays at that value until prolonged use reduces the cell voltage below the 90% threshold, at which point the packet will contain `0x09` (90%).
 
 ---
 
-## 6. Gestione Dual-Mode e Hot-Swap Cavo/Wireless
+## 6. Dual-Mode Management and Cable/Wireless Hot-Swap
 
-Dall'analisi del comportamento USB emerge una caratteristica peculiare dell'Attack Shark X11:
-* Quando il mouse viene collegato tramite cavo USB Type-C per essere utilizzato o ricaricato, il firmware del mouse **spegne il modulo ricetrasmettitore radio 2.4G**.
-* Il dongle wireless rimane collegato al PC (`1d57:fa60`), ma il mouse cessa di comunicare con esso e attiva il controller cablato con identificativo **`1d57:fa61`**.
+Analysis of the USB behavior reveals a peculiar characteristic of the Attack Shark X11:
+* When the mouse is connected via USB Type-C cable for use or charging, the mouse firmware **turns off the 2.4G radio transceiver module**.
+* The wireless dongle remains connected to the PC (`1d57:fa60`), but the mouse stops communicating with it and activates the wired controller with the identifier **`1d57:fa61`**.
 
-### Architettura di Hotplugging nel Driver Linux:
+### Hotplugging Architecture in the Linux Driver:
 In [`AttackSharkDevice::checkHotplugTransition`](file:///var/home/simone/GitHub/attack-shark-x11-linux/device/attackshark_device.cpp#L291-L310):
-1. Un timer periodico (`kHotplugCheckIntervalMs = 2000`) scansiona `/sys/class/hidraw`.
-2. Se viene rilevato il dispositivo cablato `1d57:fa61`, la priorità viene assegnata immediatamente al cavo, chiudendo il descrittore del dongle e agganciandosi a quello cablato.
-3. Lo stato di carica viene forzato a `isCharging = true` e l'interfaccia Qt aggiorna l'indicatore in `Battery: %1% (Charging via USB ⚡)`.
-4. Scollegando il cavo USB, il driver riapre istantaneamente l'interfaccia del ricevitore 2.4G (`1d57:fa60`) in totale trasparenza.
+1. A periodic timer (`kHotplugCheckIntervalMs = 2000`) scans `/sys/class/hidraw`.
+2. If the wired device `1d57:fa61` is detected, priority is immediately given to the cable, closing the dongle descriptor and attaching to the wired one.
+3. The charging state is forced to `isCharging = true` and the Qt interface updates the indicator to `Battery: %1% (Charging via USB ⚡)`.
+4. When the USB cable is unplugged, the driver instantly reopens the 2.4G receiver interface (`1d57:fa60`) with complete transparency.
 
 ---
 
 ## 7. Auto-Apply On-the-Fly
 
-Nel software Windows originale, per alcune sezioni era necessario premere esplicitamente il tasto "Apply" (`ms_3_btn_apply_dpi`), introducendo frizione d'uso. Nel driver Linux rifattorizzato:
-* Tutte le spinbox e i selettori numerici sono collegati a un timer a 350ms (`m_autoApplyTimer`). Non appena l'utente smette di digitare o scorrere, la configurazione completa viene compilata e inviata al dispositivo.
-* La selezione dei radio button degli stage DPI o il caricamento di un profilo preimpostato in *Settings* attivano l'applicazione **immediata** a 0ms di latenza.
-* Viene preservata la piena sincronizzazione bidirezionale: qualsiasi modifica via UI aggiorna il mouse, e qualsiasi pressione del tasto fisico sul mouse aggiorna la UI.
+In the original Windows software, for some sections it was necessary to explicitly press the "Apply" button (`ms_3_btn_apply_dpi`), introducing usage friction. In the refactored Linux driver:
+* All spinboxes and numeric selectors are connected to a 350 ms timer (`m_autoApplyTimer`). As soon as the user stops typing or scrolling, the complete configuration is compiled and sent to the device.
+* Selecting the DPI stage radio buttons or loading a preset profile in *Settings* triggers **immediate** application with 0 ms latency.
+* Full bidirectional synchronization is preserved: any change via the UI updates the mouse, and any press of the physical button on the mouse updates the UI.
 
 ---
 
 ---
 
-## 8. Illuminazione RGB e Protocollo LED (Report 0x05)
+## 8. RGB Lighting and LED Protocol (Report 0x05)
 
-### 8.1 Diagnosi del Bug "LED bloccato su breathing che cambia colori"
-Il comportamento anomalo segnalato dall'utente (LED che rimaneva permanentemente su *breathing* arcobaleno, ignorando la disattivazione o i cambi modalità) è stato ricondotto a tre cause distinte:
-1. **Opcode di spegnimento errato**: Nella vecchia tabella `kBaseColorModes`, l'indice 0 (*Disabled*) inviava l'opcode `0x10` (Static) con RGB `0, 0, 0`, invece del valore ufficiale `0x00` (*Off*). L'hardware interpretava `0x10` come luce fissa.
-2. **Modalità Static completamente assente**: Nel software originale Windows (`res/lan/EN.xml` e `ms_3_lightpage.xml`), le 5 modalità base per il profilo `MS_3` (Attack Shark X11) sono:
-   * Modo 0 (`0x00`): **LED Off / Disattivato**
-   * Modo 1 (`0x10`): **Static / Luce Fissa** (colore personalizzato RGB)
-   * Modo 2 (`0x20`): **Breathing / Respirazione** (colore personalizzato RGB)
-   * Modo 3 (`0x30`): **Neon** (ciclo spettro continuo / arcobaleno)
-   * Modo 4 (`0x40`): **Color Breathing** (respirazione multicromatica continua)
-   Nel codice precedente, la modalità 1 era mappata su *Breathing*, saltando la modalità *Static*, e l'opzione di default salvata nei file di configurazione era *Neon* (`0x30`), che produce esattamente un ciclo continuo di colori pulsanti.
-3. **Troncamento del Checksum a 8 bit**: Il checksum di Report `0x05` nel firmware originale (`0x496e93..0x496f8d` in `AttackShark.exe`) è una somma a 16 bit Big-Endian distribuita sui byte 11 e 12 (`sum >> 8` e `sum & 0xFF`). Il vecchio driver scriveva solo il byte basso a `out[12]` lasciando `out[11]` invariato. Di conseguenza, per qualsiasi configurazione con somma $\ge 256$, il pacchetto veniva rigettato dal mouse.
+### 8.1 Diagnosis of the "LED stuck on breathing that changes colors" Bug
+The anomalous behavior reported by the user (LED remaining permanently on rainbow *breathing*, ignoring disabling or mode changes) was traced to three distinct causes:
+1. **Wrong off opcode**: In the old `kBaseColorModes` table, index 0 (*Disabled*) sent opcode `0x10` (Static) with RGB `0, 0, 0`, instead of the official value `0x00` (*Off*). The hardware interpreted `0x10` as a steady light.
+2. **Static mode completely missing**: In the original Windows software (`res/lan/EN.xml` and `ms_3_lightpage.xml`), the 5 base modes for the `MS_3` profile (Attack Shark X11) are:
+   * Mode 0 (`0x00`): **LED Off / Disabled**
+   * Mode 1 (`0x10`): **Static / Steady Light** (custom RGB color)
+   * Mode 2 (`0x20`): **Breathing** (custom RGB color)
+   * Mode 3 (`0x30`): **Neon** (continuous spectrum cycle / rainbow)
+   * Mode 4 (`0x40`): **Color Breathing** (continuous multicolor breathing)
+   In the previous code, mode 1 was mapped to *Breathing*, skipping the *Static* mode, and the default option saved in the configuration files was *Neon* (`0x30`), which produces exactly a continuous cycle of pulsing colors.
+3. **8-bit checksum truncation**: The Report `0x05` checksum in the original firmware (`0x496e93..0x496f8d` in `AttackShark.exe`) is a 16-bit Big-Endian sum distributed over bytes 11 and 12 (`sum >> 8` and `sum & 0xFF`). The old driver wrote only the low byte to `out[12]`, leaving `out[11]` unchanged. Consequently, for any configuration with a sum $\ge 256$, the packet was rejected by the mouse.
 
-### 8.2 Struttura Disassemblata della Routine di Costruzione del Report
+### 8.2 Disassembled Structure of the Report Builder Routine
 ```asm
-; AttackShark.exe @ 0x496eeb - 0x496f8d (Costruzione Report 0x05 LED & Sleep)
+; AttackShark.exe @ 0x496eeb - 0x496f8d (Report 0x05 LED & Sleep construction)
 496eeb: mov WORD PTR [ebp-0x68], 0x0f05  ; [0] = 0x05, [1] = 0x0F
 496ef1: mov BYTE PTR [ebp-0x66], 0x01    ; [2] = 0x01
 496ef8: mov BYTE PTR [ebp-0x65], dl      ; [3] = mode << 4 (0x00, 0x10, 0x20, 0x30, 0x40)
@@ -253,53 +253,52 @@ Il comportamento anomalo segnalato dall'utente (LED che rimaneva permanentemente
 496f3a: mov BYTE PTR [ebp-0x60], dl      ; [8] = Blue
 496f37: mov BYTE PTR [ebp-0x5f], al      ; [9] = sleepTimeMin * 2
 496f4c: mov BYTE PTR [ebp-0x5e], cl      ; [10] = ((keyResponseTime - 4) / 2) + 2
-; Calcolo Checksum a 16 bit sui byte 3..10
+; 16-bit checksum calculation over bytes 3..10
 496f7c: mov BYTE PTR [ebp-0x5c], cl      ; [12] = LSB checksum
 496f7f: shr eax, 0x8
 496f84: mov BYTE PTR [ebp-0x5d], al      ; [11] = MSB checksum
-496f8a: push 0x0f                        ; Lunghezza totale = 15 byte
+496f8a: push 0x0f                        ; Total length = 15 bytes
 496f8c: push eax
-496f8d: call 0x4969f0                    ; Invia Feature Report via ioctl
+496f8d: call 0x4969f0                    ; Sends Feature Report via ioctl
 ```
 
-### 8.3 Validazione dal Vivo su `/dev/hidraw7`
-Interrogando l'Attack Shark X11 con i pacchetti a 15 byte generati dal driver:
-* **Modalità Spento (`0x00`)**: Spegnimento immediato del LED e ricezione ACK `03 10 50 00 05`.
-* **Modalità Statico (`0x10`)**: Colore fisso solido (testato con Rosso, Verde, Blu, Bianco e confermato dall'utente).
-* **Modalità Respirazione (`0x20`)**: Respirazione fluida a colore fisso impostato dall'utente.
-* **Modalità Neon (`0x30`) & Color Breathing (`0x40`)**: Transizioni cicliche spettro completo con ACK `00`.
-* **Modalità Static DPI (`0x50`) & Breathing DPI (`0x60`)**: L'illuminazione riflette direttamente il colore dello stage DPI attivo (Rosso per S1, Verde per S2, Blu per S3, Giallo per S4, Ciano per S5), sia a luce fissa che in respirazione pulsata.
+### 8.3 Live Validation on `/dev/hidraw7`
+By querying the Attack Shark X11 with the 15-byte packets generated by the driver:
+* **Off Mode (`0x00`)**: Immediate LED turn-off and ACK reception `03 10 50 00 05`.
+* **Static Mode (`0x10`)**: Solid fixed color (tested with Red, Green, Blue, White and confirmed by the user).
+* **Breathing Mode (`0x20`)**: Smooth breathing in the fixed color set by the user.
+* **Neon Mode (`0x30`) & Color Breathing (`0x40`)**: Cyclic full-spectrum transitions with ACK `00`.
+* **Static DPI Mode (`0x50`) & Breathing DPI (`0x60`)**: The lighting directly reflects the color of the active DPI stage (Red for S1, Green for S2, Blue for S3, Yellow for S4, Cyan for S5), both as a steady light and in pulsing breathing.
 
-### 8.4 Mappatura Colori Stage in Report 0x04 (Byte 25..48)
-Dall'analisi della routine a `0x00497350` di `AttackShark.exe`:
-Nel pacchetto di configurazione del sensore ottico (Report `0x04`, 56 byte), i byte 25..48 contengono 8 terne RGB che definiscono i colori hardware associati a ciascun livello DPI:
-* **Byte 25..27**: Stage 1 = Rosso (`0xFF, 0x00, 0x00`)
-* **Byte 28..30**: Stage 2 = Verde (`0x00, 0xFF, 0x00`)
-* **Byte 31..33**: Stage 3 = Blu (`0x00, 0x00, 0xFF`)
-* **Byte 34..36**: Stage 4 = Giallo (`0xFF, 0xFF, 0x00`)
-* **Byte 37..39**: Stage 5 = Ciano (`0x00, 0xFF, 0xFF`)
-* **Byte 40..48**: Stage 6..8 = Default padding (Viola, Arancione, Bianco)
-* **Byte 49**: Lift-Off Distance (LOD = `0x02` per 2mm)
+### 8.4 Stage Color Mapping in Report 0x04 (Bytes 25..48)
+From the analysis of the routine at `0x00497350` in `AttackShark.exe`:
+In the optical sensor configuration packet (Report `0x04`, 56 bytes), bytes 25..48 contain 8 RGB triplets that define the hardware colors associated with each DPI level:
+* **Bytes 25..27**: Stage 1 = Red (`0xFF, 0x00, 0x00`)
+* **Bytes 28..30**: Stage 2 = Green (`0x00, 0xFF, 0x00`)
+* **Bytes 31..33**: Stage 3 = Blue (`0x00, 0x00, 0xFF`)
+* **Bytes 34..36**: Stage 4 = Yellow (`0xFF, 0xFF, 0x00`)
+* **Bytes 37..39**: Stage 5 = Cyan (`0x00, 0xFF, 0xFF`)
+* **Bytes 40..48**: Stages 6..8 = Default padding (Purple, Orange, White)
+* **Byte 49**: Lift-Off Distance (LOD = `0x02` for 2 mm)
 
-### 8.5 Ripristino Automatico dell'Illuminazione su Cambio DPI Hardware
-Quando l'utente preme il pulsante fisico per cambiare livello DPI durante l'uso, il firmware del mouse invia il report di notifica `0x03 0x10 0x10 <stage> 0x00` e attiva autonomamente il LED sul colore fisso del nuovo livello per fornire feedback visivo.
-Tuttavia, se l'utente aveva impostato una modalità personalizzata diversa (es. *Breathing*, *Neon* o *Disabled*), il mouse rimarrebbe bloccato su quel colore fisso.
-Il driver Linux risolve questo comportamento:
-1. All'arrivo della notifica hardware, aggiorna lo stage nella UI.
-2. Se la modalità attiva non è *Static DPI*, avvia un timer a 1000ms (`m_dpiLedRestoreTimer`).
-3. L'utente visualizza chiaramente il colore del nuovo livello per 1 secondo, dopodiché il driver riapplica Report `0x05`, ripristinando in modo fluido e trasparente la modalità desiderata.
+### 8.5 Automatic Lighting Restoration on Hardware DPI Change
+When the user presses the physical button to change the DPI level during use, the mouse firmware sends the notification report `0x03 0x10 0x10 <stage> 0x00` and autonomously activates the LED in the fixed color of the new level to provide visual feedback.
+However, if the user had set a different custom mode (e.g., *Breathing*, *Neon* or *Disabled*), the mouse would remain stuck on that fixed color.
+The Linux driver resolves this behavior:
+1. When the hardware notification arrives, it updates the stage in the UI.
+2. If the active mode is not *Static DPI*, it starts a 1000 ms timer (`m_dpiLedRestoreTimer`).
+3. The user clearly sees the color of the new level for 1 second, after which the driver reapplies Report `0x05`, smoothly and transparently restoring the desired mode.
 
 ---
 
-## 9. Sintesi dei Risultati Ottenuti
+## 9. Summary of Results Obtained
 
-| Funzionalità | Stato Originale (`hook.cpp`) | Stato Post-Reverse Engineering |
+| Feature | Original State (`hook.cpp`) | Post-Reverse Engineering State |
 |---|---|---|
-| **Applicazione DPI** | Fallita (`03 10 50 01 04`, errore hardware) | Funzionante (`03 10 50 00 04`, ACK positivo, PAW3311 configurato) |
-| **Pulsante DPI Fisico** | Non rilevato | Sincronizzazione in tempo reale (`0x1010`) con ripristino automatico LED |
-| **Lettura Batteria** | Errata (falso 10% / formato ignoto) | Corretta (scala a decimi, rilevamento carica/scarica `0x1040`) |
-| **Modalità Cablata USB** | Non riconosciuta (cercava PID `fa55`) | Riconosciuta con priorità (`fa61`) e stato in carica automatico |
-| **Controllo LED RGB** | Bloccato su breathing continuo / spegnimento rotto | 7 modalità complete (Off, Statico, Breathing, Neon, Color Breathing, Static DPI, Breathing DPI), color picker RGB e colori stage dedicati |
-| **Applicazione Parametri** | Obbligo di click su tasto Apply | Auto-Apply istantaneo e debounced |
-| **Architettura Software** | File monolitico procedurale | C++17 / Qt6 modulare con tipi forti, testabile e documentato |
-
+| **DPI Application** | Failed (`03 10 50 01 04`, hardware error) | Working (`03 10 50 00 04`, positive ACK, PAW3311 configured) |
+| **Physical DPI Button** | Not detected | Real-time synchronization (`0x1010`) with automatic LED restoration |
+| **Battery Reading** | Incorrect (false 10% / unknown format) | Correct (tenths scale, charge/discharge detection `0x1040`) |
+| **USB Wired Mode** | Not recognized (looked for PID `fa55`) | Recognized with priority (`fa61`) and automatic charging state |
+| **RGB LED Control** | Stuck on continuous breathing / broken off | 7 complete modes (Off, Static, Breathing, Neon, Color Breathing, Static DPI, Breathing DPI), RGB color picker and dedicated stage colors |
+| **Parameter Application** | Required clicking the Apply button | Instant and debounced Auto-Apply |
+| **Software Architecture** | Monolithic procedural file | Modular C++17 / Qt6 with strong types, testable and documented |

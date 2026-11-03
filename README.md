@@ -1,14 +1,12 @@
-<img width="722" height="380" alt="Screenshot DEMO" src="https://github.com/user-attachments/assets/242df54c-0cb7-4bb3-a49a-8738981876f3" />
+<img height="400" alt="Screenshot demo of the user interface (UI)" src="./assets/ui_demo.png" />
 
+    
+## Attack Shark X11 for Linux
 
-## Attack Shark X11 Software GUI for Linux
-
-This software is for the mouse [Attack Shark X11](https://attackshark.com/products/attack-shark-x11-wireless-gaming-mouse-charging-dock), which you can control basic settings from it like polling rate, color modes, this is a workaround software control and still being developed to support all features he has on Windows.
+This software provides configuration support for the [Attack Shark X11](https://attackshark.com/products/attack-shark-x11-wireless-gaming-mouse-charging-dock), allowing users to adjust settings such as polling rate and lighting modes on Linux. It serves as an unofficial alternative to the Windows software and is actively being developed to expand feature support.
 
 ## Disclaimer
-This project is an independent, unofficial, and community-driven effort. It is not affiliated with, endorsed by, sponsored by, or otherwise associated with Attack Shark, Guangzhou Shijunxingcheng Electronics Technology Co., Ltd., or PixArt Imaging Inc.
-This repository does not contain any source code from the original software driver. All communication protocols used by this project were reverse engineered through lawful methods based on publicly observable behavior and independent analysis.
-All trademarks, product names, and company names mentioned in this repository are the property of their respective owners and are used for identification purposes only.
+This is an independent, community-driven project, not affiliated with or endorsed by Attack Shark, Guangzhou Shijunxingcheng Electronics Technology Co., Ltd., or PixArt Imaging Inc. No original driver source code is used; all communication protocols were independently reverse engineered. All trademarks and product names belong to their respective owners and are used for identification purposes only.
 
 ## Install
 
@@ -27,14 +25,12 @@ cmake --build build -j$(nproc)
 ```sh
 paru -S attackshark-x11 # you can also use yay
 ```
-> [!WARNING]
-> **The AUR package is not recommended. It is recommended to clone the repo and build the project yourself.**
 
 **Debian/Ubuntu:**
 ```sh
+# Install dependencies
 sudo apt-get install -y wget git cmake build-essential pkg-config libudev-dev libusb-1.0-0-dev qt6-base-dev
-wget https://github.com/iago-fragnan/attack-shark-x11-linux/releases/download/v2.0.1/attackshark-x11-v2.0.1.deb
-sudo dpkg -i attackshark-x11.deb
+sudo dpkg -i attackshark-x11.deb # .deb file from releases
 ```
 
 
@@ -67,12 +63,12 @@ Detailed technical documentation and reverse engineering reports are available i
         - [ ] Load
     - [x] Device selection
     - [ ] Auto Startup
+- [ ] Low Battery Notification
 
 
-## CREDITS
+## Acknowledgements
 
-- Lightning icon from [Flaticon](https://www.flaticon.com/free-icon/flash_252851?term=lightning&related_id=252851)
-
-- Settings icon from [Flaticon](https://www.flaticon.com/free-icon/settings_3524659?term=gear&related_id=3524659)
-
-- Additional reverse engineering from [HarukaYamamoto0](https://github.com/HarukaYamamoto0/attack-shark-x11-driver/)
+- Lightning and Settings icons provided by [Flaticon](https://www.flaticon.com/).
+- Additional Reverse engineering references from [HarukaYamamoto0](https://github.com/HarukaYamamoto0/attack-shark-x11-driver/).
+- Contributors
+- You, for reading this
