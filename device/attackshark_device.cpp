@@ -457,6 +457,35 @@ void AttackSharkDevice::buildPollingReport(PollingRate rate, uint8_t out[9])
     std::memcpy(out, report, sizeof(report));
 }
 
+void AttackSharkDevice::buildDefaultButtonMappingReport(uint8_t out[59])
+{
+    constexpr int kSlotsStart = 3;
+    constexpr int kSlotsEnd = 55;
+    constexpr int kSlotSize = 3;
+    constexpr uint8_t kDisabledButton = 0x01;
+
+    std::memset(out, 0, 59);
+    out[0] = 0x08;
+    out[1] = 0x3B;
+    out[2] = 0x01;
+    for (int i = kSlotsStart; i < kSlotsEnd; i += kSlotSize)
+        out[i] = kDisabledButton;
+
+    out[3]  = 0x02; // Left click
+    out[6]  = 0x03; // Right click
+    out[9]  = 0x04; // Middle click
+    out[18] = 0x0D; // DPI cycle
+    out[21] = 0x06; // Forward
+    out[24] = 0x05; // Backward
+    out[51] = 0x09; // Scroll up
+    out[54] = 0x0A; // Scroll down
+
+    int sum = 0;
+    for (int i = 2; i < 58; ++i)
+        sum += out[i];
+    out[58] = static_cast<uint8_t>((sum - 1) & 0xFF);
+}
+
 void AttackSharkDevice::buildColorAndPowerReport(const MouseConfig &config, uint8_t out[15])
 {
     std::memset(out, 0, 15);
@@ -594,6 +623,14 @@ bool AttackSharkDevice::applyConfiguration(const MouseConfig &config, QString *e
     uint8_t pollingReport[9];
     buildPollingReport(config.pollingRate, pollingReport);
     if (!sendFeatureReport(pollingReport, sizeof(pollingReport), errorMessage))
+        return false;
+
+    QThread::msleep(kInterReportDelayMs);
+
+    // 4. Restore the default button mapping (Report 0x08); the firmware can lose it after the reports above
+    uint8_t buttonReport[59];
+    buildDefaultButtonMappingReport(buttonReport);
+    if (!sendFeatureReport(buttonReport, sizeof(buttonReport), errorMessage))
         return false;
 
     // Drain ACK reports

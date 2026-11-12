@@ -56,17 +56,17 @@ Detailed technical documentation and reverse engineering reports are available i
 - [x] Automatic Device Selection
 - [x] Custom window for settings
     - [ ] Macro Support
-    - [ ] Minimize to System Tray
+    - [x] Minimize to System Tray
     - [x] Profiles
         - [x] Apply
         - [ ] Save
         - [ ] Load
     - [x] Device selection
-    - [ ] Auto Startup
-- [ ] Low Battery Notification
+    - [x] Auto Startup
+- [x] Low Battery Notification
 
 
-## Acknowledgements
+## Acknowledgements 
 
 - Lightning and Settings icons provided by [Flaticon](https://www.flaticon.com/).
 - Additional Reverse engineering references from [HarukaYamamoto0](https://github.com/HarukaYamamoto0/attack-shark-x11-driver/).

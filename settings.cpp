@@ -2,13 +2,47 @@
 #include "ui_settings.h"
 #include "device/attackshark_device.h"
 
+#include <QCoreApplication>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QSettings>
+#include <QStandardPaths>
+#include <QTextStream>
 #include <QStyle>
 
 namespace {
 constexpr auto kSettingsOrg = "AttackShark";
 constexpr auto kSettingsApp = "X11";
+
+QString autostartFilePath()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
+        + QStringLiteral("/autostart/attackshark-x11.desktop");
+}
+
+bool setAutostart(bool enabled)
+{
+    const QString path = autostartFilePath();
+    if (!enabled)
+        return !QFile::exists(path) || QFile::remove(path);
+
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+        return false;
+
+    QTextStream(&file)
+        << "[Desktop Entry]\n"
+        << "Type=Application\n"
+        << "Name=Attack Shark X11\n"
+        << "Exec=" << QCoreApplication::applicationFilePath() << " --minimized\n"
+        << "Icon=attackshark-x11\n"
+        << "Terminal=false\n"
+        << "X-GNOME-Autostart-enabled=true\n";
+    return true;
+}
 } // namespace
 
 settings::settings(QWidget *parent)
@@ -25,6 +59,9 @@ settings::settings(QWidget *parent)
     ui->chbox_alldevices->blockSignals(true);
     ui->chbox_alldevices->setChecked(allDevices);
     ui->chbox_alldevices->blockSignals(false);
+
+    ui->chkbox_minimizeTray->setChecked(qSettings.value(QStringLiteral("minimizeToTray"), true).toBool());
+    ui->chkbox_autostartup->setChecked(QFile::exists(autostartFilePath()));
 
     populateDevices(allDevices);
 
@@ -163,19 +200,23 @@ void settings::on_btn_applyProfilePreset_clicked()
 
 void settings::on_buttonBox_accepted()
 {
-    const int index = ui->cbox_devices->currentIndex();
-    if (index < 0 || index >= m_devicesConnected.size()) {
-        QMessageBox::warning(this, QStringLiteral("Error"), QStringLiteral("Please select a device before confirming."));
-        return;
-    }
-
-    const QString devicePath = m_devicesConnected[index].hidrawPath;
-
     QSettings qSettings(kSettingsOrg, kSettingsApp);
-    qSettings.setValue(QStringLiteral("devicePath"), devicePath);
+    qSettings.setValue(QStringLiteral("minimizeToTray"), ui->chkbox_minimizeTray->isChecked());
     qSettings.setValue(QStringLiteral("allDevices"), ui->chbox_alldevices->isChecked());
+
+    const int index = ui->cbox_devices->currentIndex();
+    const bool hasDevice = index >= 0 && index < m_devicesConnected.size();
+    if (hasDevice)
+        qSettings.setValue(QStringLiteral("devicePath"), m_devicesConnected[index].hidrawPath);
     qSettings.sync();
 
-    emit deviceSelected(devicePath);
+    if (!setAutostart(ui->chkbox_autostartup->isChecked())) {
+        QMessageBox::warning(this, QStringLiteral("Error"),
+            QStringLiteral("Could not update the autostart entry."));
+    }
+
+    emit minimizeToTrayChanged();
+    if (hasDevice)
+        emit deviceSelected(m_devicesConnected[index].hidrawPath);
     accept();
 }

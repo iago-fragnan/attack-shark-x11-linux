@@ -22,6 +22,7 @@ public:
 signals:
     void deviceSelected(const QString &devicePath);
     void profileApplied();
+    void minimizeToTrayChanged();
 
 private slots:
     void on_btn_refresh_clicked();

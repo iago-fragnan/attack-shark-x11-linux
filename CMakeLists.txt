@@ -9,8 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets DBus)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets DBus)
 
 set(PROJECT_SOURCES
     main.cpp
@@ -39,7 +39,7 @@ endif()
 
 target_include_directories(attackshark-x11 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(attackshark-x11 PRIVATE -Wall -Wextra -Wpedantic)
-target_link_libraries(attackshark-x11 PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(attackshark-x11 PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::DBus)
 
 include(GNUInstallDirs)
 install(TARGETS attackshark-x11
