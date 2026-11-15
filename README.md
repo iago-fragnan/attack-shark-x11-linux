@@ -1,5 +1,4 @@
 <img height="400" alt="Screenshot demo of the user interface (UI)" src="./assets/ui_demo.png" />
-
     
 ## Attack Shark X11 for Linux
 
@@ -13,11 +12,9 @@ This is an independent, community-driven project, not affiliated with or endorse
 **Build it yourself (Recommended):**
 ```sh
 git clone https://github.com/iago-fragnan/attack-shark-x11-linux.git
-# Install dependencies
-# cmake build-essential pkg-config libudev-dev libusb-1.0-0-dev qt6-base-dev
 cd attack-shark-x11-linux
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(nproc)
+cmake -S . -B build
+cmake --build build
 ./build/attackshark-x11
 ```
 
@@ -29,10 +26,8 @@ paru -S attackshark-x11 # you can also use yay
 **Debian/Ubuntu:**
 ```sh
 # Install dependencies
-sudo apt-get install -y wget git cmake build-essential pkg-config libudev-dev libusb-1.0-0-dev qt6-base-dev
 sudo dpkg -i attackshark-x11.deb # .deb file from releases
 ```
-
 
 ## Documentation
 
@@ -56,17 +51,17 @@ Detailed technical documentation and reverse engineering reports are available i
 - [x] Automatic Device Selection
 - [x] Custom window for settings
     - [ ] Macro Support
-    - [ ] Minimize to System Tray
+    - [x] Minimize to System Tray
     - [x] Profiles
         - [x] Apply
-        - [ ] Save
-        - [ ] Load
+        - [x] Save
+        - [x] Create
     - [x] Device selection
-    - [ ] Auto Startup
-- [ ] Low Battery Notification
+    - [x] Auto Startup
+- [x] Low Battery Notification
 
 
-## Acknowledgements
+## Acknowledgements 
 
 - Lightning and Settings icons provided by [Flaticon](https://www.flaticon.com/).
 - Additional Reverse engineering references from [HarukaYamamoto0](https://github.com/HarukaYamamoto0/attack-shark-x11-driver/).

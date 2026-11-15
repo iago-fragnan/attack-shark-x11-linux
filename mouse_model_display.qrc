@@ -4,6 +4,8 @@
         <file>assets/mouse-2.png</file>
         <file>assets/lightning.png</file>
         <file>assets/wgear.png</file>
+        <file>assets/ats-icon-white.png</file>
+        <file>packaging/icons/attackshark-x11.png</file>
     </qresource>
     <qresource prefix="/"/>
 </RCC>

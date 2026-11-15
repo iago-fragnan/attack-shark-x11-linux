@@ -60,6 +60,7 @@ private:
     void parseIncomingReport(const uint8_t *buf, ssize_t length);
 
     static void buildPollingReport(PollingRate rate, uint8_t out[9]);
+    static void buildDefaultButtonMappingReport(uint8_t out[59]);
     static void buildColorAndPowerReport(const MouseConfig &config, uint8_t out[15]);
     static void buildDpiAndSensorReport(const MouseConfig &config, uint8_t out[56]);
 

@@ -21,16 +21,20 @@ public:
 
 signals:
     void deviceSelected(const QString &devicePath);
-    void profileApplied();
+    void profileApplied(const QString &profileName);
+    void minimizeToTrayChanged();
 
 private slots:
     void on_btn_refresh_clicked();
     void on_chbox_alldevices_checkStateChanged(const Qt::CheckState &arg1);
     void on_btn_applyProfilePreset_clicked();
+    void on_btn_saveProfile_clicked();
+    void on_btn_deleteProfile_clicked();
     void on_buttonBox_accepted();
 
 private:
     void populateDevices(bool allDevices);
+    void populateProfiles(const QString &selectName = QString());
 
     Ui::settings *ui;
     QList<attackshark::DeviceInfo> m_devicesConnected;

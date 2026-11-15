@@ -44,8 +44,11 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     applyDarkTheme(app);
+    app.setQuitOnLastWindowClosed(false);
 
     atsx11 window;
-    window.show();
+    const bool startMinimized = app.arguments().contains(QStringLiteral("--minimized"));
+    if (!(startMinimized && window.isMinimizeToTrayEnabled()))
+        window.show();
     return app.exec();
 }

@@ -1,19 +1,30 @@
 #include "atsx11.h"
 #include "./ui_atsx11.h"
 #include "settings.h"
+#include "core/profile_store.h"
 
 #include <QCloseEvent>
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusReply>
 #include <QColorDialog>
+#include <QAction>
 #include <QIcon>
+#include <QMenu>
 #include <QMessageBox>
 #include <QSettings>
+#include <QSystemTrayIcon>
 #include <algorithm>
+#include <limits>
 
 namespace {
 constexpr auto kSettingsOrg = "AttackShark";
 constexpr auto kSettingsApp = "X11";
-constexpr int kDefaultDpiStages[attackshark::kDpiStagesCount] = {400, 800, 1600, 3200, 5000};
 constexpr int kAutoApplyDebounceMs = 350;
+constexpr int kLowBatteryThreshold = 20;
+constexpr int kCriticalBatteryThreshold = 5;
+constexpr int kLowBatteryTimeoutMs = 10000;
+constexpr int kNoBatteryAlert = std::numeric_limits<int>::max();
 } // namespace
 
 atsx11::atsx11(QWidget *parent)
@@ -22,7 +33,7 @@ atsx11::atsx11(QWidget *parent)
     , m_device(this)
 {
     ui->setupUi(this);
-    setWindowIcon(QIcon(QStringLiteral(":/images/assets/mouse.png")));
+    setWindowIcon(QIcon(QStringLiteral(":/images/packaging/icons/attackshark-x11.png")));
     ui->btn_settings->setIcon(QIcon(QStringLiteral(":/images/assets/wgear.png")));
     ui->lbl_isCharging->setPixmap(QPixmap());
 
@@ -93,6 +104,7 @@ atsx11::atsx11(QWidget *parent)
     ui->btn_apply->setEnabled(false);
 
     loadSettings();
+    setupTrayIcon();
 }
 
 atsx11::~atsx11()
@@ -100,10 +112,59 @@ atsx11::~atsx11()
     delete ui;
 }
 
+bool atsx11::isMinimizeToTrayEnabled() const
+{
+    return m_trayIcon && QSettings(kSettingsOrg, kSettingsApp).value(QStringLiteral("minimizeToTray"), true).toBool();
+}
+
+void atsx11::setupTrayIcon()
+{
+    if (!QSystemTrayIcon::isSystemTrayAvailable())
+        return;
+
+    auto *menu = new QMenu(this);
+    menu->addAction(QStringLiteral("Show"), this, &atsx11::showFromTray);
+    menu->addAction(QStringLiteral("Quit"), this, &atsx11::quitApplication);
+
+    m_trayIcon = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/assets/ats-icon-white.png")), this);
+    m_trayIcon->setToolTip(QStringLiteral("Attack Shark X11"));
+    m_trayIcon->setContextMenu(menu);
+    connect(m_trayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
+        if (reason == QSystemTrayIcon::Trigger)
+            showFromTray();
+    });
+    updateTrayVisibility();
+}
+
+void atsx11::updateTrayVisibility()
+{
+    if (m_trayIcon)
+        m_trayIcon->setVisible(isMinimizeToTrayEnabled());
+}
+
+void atsx11::showFromTray()
+{
+    showNormal();
+    raise();
+    activateWindow();
+}
+
+void atsx11::quitApplication()
+{
+    m_isQuitting = true;
+    close();
+}
+
 void atsx11::closeEvent(QCloseEvent *event)
 {
     saveSettings();
+    if (!m_isQuitting && isMinimizeToTrayEnabled()) {
+        hide();
+        event->ignore();
+        return;
+    }
     QMainWindow::closeEvent(event);
+    qApp->quit();
 }
 
 void atsx11::onHardwareDpiStageChanged(int stageIndex)
@@ -141,6 +202,7 @@ void atsx11::onUserSettingChanged(bool immediate)
         return;
 
     updateInfoLabels();
+    saveSettings();
 
     if (!m_device.isConnected())
         return;
@@ -328,25 +390,7 @@ void atsx11::loadSettings()
 {
     QSettings qSettings(kSettingsOrg, kSettingsApp);
 
-    attackshark::MouseConfig cfg;
-    for (int i = 0; i < attackshark::kDpiStagesCount; ++i) {
-        cfg.dpiStages[i].dpi = qSettings.value(
-            QStringLiteral("dpiStage%1").arg(i + 1),
-            kDefaultDpiStages[i]).toInt();
-    }
-    cfg.activeDpiStage    = std::clamp(qSettings.value(QStringLiteral("activeDpiStage"), 2).toInt(), 0, attackshark::kDpiStagesCount - 1);
-    cfg.colorMode         = static_cast<attackshark::ColorMode>(qSettings.value(QStringLiteral("colorMode"), static_cast<int>(attackshark::ColorMode::Static)).toInt());
-    cfg.ledRed            = static_cast<uint8_t>(qSettings.value(QStringLiteral("ledRed"), 255).toUInt());
-    cfg.ledGreen          = static_cast<uint8_t>(qSettings.value(QStringLiteral("ledGreen"), 0).toUInt());
-    cfg.ledBlue           = static_cast<uint8_t>(qSettings.value(QStringLiteral("ledBlue"), 0).toUInt());
-    cfg.pollingRate       = static_cast<attackshark::PollingRate>(qSettings.value(QStringLiteral("pollingRate"), 3).toInt());
-    cfg.angleSnap         = qSettings.value(QStringLiteral("angleSnap"), false).toBool();
-    cfg.rippleControl     = qSettings.value(QStringLiteral("rippleControl"), false).toBool();
-    cfg.sleepTimeMin      = qSettings.value(QStringLiteral("sleepTime"), 5).toInt();
-    cfg.deepSleepTimeMin  = qSettings.value(QStringLiteral("deepSleepTime"), 10).toInt();
-    cfg.keyResponseTimeMs = qSettings.value(QStringLiteral("keyRespTime"), 8).toInt();
-
-    applyConfigToUi(cfg);
+    applyConfigToUi(attackshark::profiles::readConfig(qSettings));
 
     QString devPath = qSettings.value(QStringLiteral("devicePath")).toString();
     const QString resolved = attackshark::AttackSharkDevice::resolveConfigHidrawPath(devPath);
@@ -367,22 +411,7 @@ void atsx11::loadSettings()
 void atsx11::saveSettings()
 {
     QSettings qSettings(kSettingsOrg, kSettingsApp);
-    const attackshark::MouseConfig cfg = collectUiConfig();
-
-    for (int i = 0; i < attackshark::kDpiStagesCount; ++i) {
-        qSettings.setValue(QStringLiteral("dpiStage%1").arg(i + 1), cfg.dpiStages[i].dpi);
-    }
-    qSettings.setValue(QStringLiteral("activeDpiStage"), cfg.activeDpiStage);
-    qSettings.setValue(QStringLiteral("colorMode"),      static_cast<int>(cfg.colorMode));
-    qSettings.setValue(QStringLiteral("ledRed"),         cfg.ledRed);
-    qSettings.setValue(QStringLiteral("ledGreen"),       cfg.ledGreen);
-    qSettings.setValue(QStringLiteral("ledBlue"),        cfg.ledBlue);
-    qSettings.setValue(QStringLiteral("pollingRate"),    static_cast<int>(cfg.pollingRate));
-    qSettings.setValue(QStringLiteral("angleSnap"),      cfg.angleSnap);
-    qSettings.setValue(QStringLiteral("rippleControl"),  cfg.rippleControl);
-    qSettings.setValue(QStringLiteral("sleepTime"),      cfg.sleepTimeMin);
-    qSettings.setValue(QStringLiteral("deepSleepTime"),  cfg.deepSleepTimeMin);
-    qSettings.setValue(QStringLiteral("keyRespTime"),    cfg.keyResponseTimeMs);
+    attackshark::profiles::writeConfig(qSettings, collectUiConfig());
     qSettings.sync();
 }
 
@@ -420,8 +449,47 @@ void atsx11::on_btn_apply_clicked()
             .arg(cfg.activeDpiValue()));
 }
 
+void atsx11::sendLowBatteryNotification(int percentage)
+{
+    const bool isCritical = percentage <= kCriticalBatteryThreshold;
+    const QString title = QStringLiteral("Mouse battery at %1%").arg(percentage);
+    const QString body = isCritical ? QStringLiteral("Critical! Plug in the USB cable now.")
+                                    : QStringLiteral("Plug in the USB cable to charge.");
+    const int timeoutMs = isCritical ? 0 : kLowBatteryTimeoutMs;
+
+    QDBusInterface notifications(QStringLiteral("org.freedesktop.Notifications"),
+                                 QStringLiteral("/org/freedesktop/Notifications"),
+                                 QStringLiteral("org.freedesktop.Notifications"),
+                                 QDBusConnection::sessionBus());
+    if (notifications.isValid()) {
+        const QDBusReply<uint> reply = notifications.call(
+            QStringLiteral("Notify"), QStringLiteral("Attack Shark X11"), 0u,
+            QStringLiteral("input-mouse"), title, body,
+            QStringList(), QVariantMap { { QStringLiteral("urgency"), QVariant::fromValue<uchar>(isCritical ? 2 : 1) } }, timeoutMs);
+        if (reply.isValid())
+            return;
+    }
+
+    if (m_trayIcon && m_trayIcon->isVisible())
+        m_trayIcon->showMessage(title, body, QSystemTrayIcon::Warning);
+    else
+        QMessageBox::warning(this, title, body);
+}
+
 void atsx11::onBatteryStatusUpdated(const attackshark::BatteryStatus &status)
 {
+    int alertLevel = kNoBatteryAlert;
+    if (!status.isCharging && status.percentage >= 0) {
+        if (status.percentage <= kCriticalBatteryThreshold)
+            alertLevel = kCriticalBatteryThreshold;
+        else if (status.percentage <= kLowBatteryThreshold)
+            alertLevel = kLowBatteryThreshold;
+    }
+    if (alertLevel < m_lastBatteryAlertLevel)
+        sendLowBatteryNotification(status.percentage);
+    if (status.isCharging || status.percentage > kLowBatteryThreshold || alertLevel < m_lastBatteryAlertLevel)
+        m_lastBatteryAlertLevel = alertLevel;
+
     if (status.isCharging) {
         ui->lbl_isCharging->setEnabled(true);
         ui->lbl_isCharging->setPixmap(QPixmap(QStringLiteral(":/images/assets/lightning.png")));
@@ -502,6 +570,8 @@ void atsx11::on_btn_settings_clicked()
         m_settingsDialog = new settings(this);
         connect(m_settingsDialog, &settings::deviceSelected,
                 this, &atsx11::onSettingsDeviceSelected);
+        connect(m_settingsDialog, &settings::minimizeToTrayChanged,
+                this, &atsx11::updateTrayVisibility);
         connect(m_settingsDialog, &settings::profileApplied,
                 this, &atsx11::reloadSettingsUi);
     }
@@ -515,8 +585,16 @@ void atsx11::onSettingsDeviceSelected(const QString &devicePath)
     connectToDevice(devicePath);
 }
 
-void atsx11::reloadSettingsUi()
+void atsx11::reloadSettingsUi(const QString &profileName)
 {
     loadSettings();
+    if (!m_device.isConnected()) {
+        QMessageBox::warning(m_settingsDialog, QStringLiteral("No valid mouse selected"),
+            QStringLiteral("Mouse not selected or connected."));
+        return;
+    }
+
     performAutoApply();
+    QMessageBox::information(m_settingsDialog, QStringLiteral("Success"),
+        QStringLiteral("Profile \"%1\" applied to %2.").arg(profileName, m_device.currentHidrawPath()));
 }

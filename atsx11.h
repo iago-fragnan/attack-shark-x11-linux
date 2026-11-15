@@ -8,9 +8,11 @@
 #include <QMainWindow>
 #include <QTimer>
 #include <array>
+#include <limits>
 
 class QCloseEvent;
 class QRadioButton;
+class QSystemTrayIcon;
 class QSpinBox;
 class settings;
 
@@ -28,6 +30,8 @@ public:
     explicit atsx11(QWidget *parent = nullptr);
     ~atsx11() override;
 
+    bool isMinimizeToTrayEnabled() const;
+
 protected:
     void closeEvent(QCloseEvent *event) override;
 
@@ -39,7 +43,7 @@ private slots:
     void on_btn_settings_clicked();
     void on_btn_ledColor_clicked();
     void onSettingsDeviceSelected(const QString &devicePath);
-    void reloadSettingsUi();
+    void reloadSettingsUi(const QString &profileName);
     void onBatteryStatusUpdated(const attackshark::BatteryStatus &status);
     void onConnectionModeChanged(bool isWired, const QString &hidrawPath);
     void onHardwareDpiStageChanged(int stageIndex);
@@ -47,6 +51,10 @@ private slots:
     void updateInfoLabels();
     void onUserSettingChanged(bool immediate = false);
     void performAutoApply();
+    void updateTrayVisibility();
+    void showFromTray();
+    void quitApplication();
+    void sendLowBatteryNotification(int percentage);
 
 private:
     void connectToDevice(const QString &devicePath);
@@ -55,13 +63,17 @@ private:
     attackshark::MouseConfig collectUiConfig() const;
     void applyConfigToUi(const attackshark::MouseConfig &cfg);
     void updateLedColorButton();
+    void setupTrayIcon();
 
     Ui::atsx11 *ui;
     attackshark::AttackSharkDevice m_device;
     settings *m_settingsDialog = nullptr;
+    QSystemTrayIcon *m_trayIcon = nullptr;
     QTimer *m_autoApplyTimer = nullptr;
     QTimer *m_dpiLedRestoreTimer = nullptr;
     QColor m_ledColor { 255, 0, 0 };
+    bool m_isQuitting = false;
+    int m_lastBatteryAlertLevel = std::numeric_limits<int>::max();
     bool m_isLoadingSettings = false;
     bool m_isHardwareUpdating = false;
     std::array<QRadioButton *, attackshark::kDpiStagesCount> m_stageRadios {};
