@@ -1,6 +1,7 @@
 #include "atsx11.h"
 #include "./ui_atsx11.h"
 #include "settings.h"
+#include "core/profile_store.h"
 
 #include <QCloseEvent>
 #include <QDBusConnection>
@@ -19,7 +20,6 @@
 namespace {
 constexpr auto kSettingsOrg = "AttackShark";
 constexpr auto kSettingsApp = "X11";
-constexpr int kDefaultDpiStages[attackshark::kDpiStagesCount] = {400, 800, 1600, 3200, 5000};
 constexpr int kAutoApplyDebounceMs = 350;
 constexpr int kLowBatteryThreshold = 20;
 constexpr int kCriticalBatteryThreshold = 5;
@@ -390,25 +390,7 @@ void atsx11::loadSettings()
 {
     QSettings qSettings(kSettingsOrg, kSettingsApp);
 
-    attackshark::MouseConfig cfg;
-    for (int i = 0; i < attackshark::kDpiStagesCount; ++i) {
-        cfg.dpiStages[i].dpi = qSettings.value(
-            QStringLiteral("dpiStage%1").arg(i + 1),
-            kDefaultDpiStages[i]).toInt();
-    }
-    cfg.activeDpiStage    = std::clamp(qSettings.value(QStringLiteral("activeDpiStage"), 2).toInt(), 0, attackshark::kDpiStagesCount - 1);
-    cfg.colorMode         = static_cast<attackshark::ColorMode>(qSettings.value(QStringLiteral("colorMode"), static_cast<int>(attackshark::ColorMode::Static)).toInt());
-    cfg.ledRed            = static_cast<uint8_t>(qSettings.value(QStringLiteral("ledRed"), 255).toUInt());
-    cfg.ledGreen          = static_cast<uint8_t>(qSettings.value(QStringLiteral("ledGreen"), 0).toUInt());
-    cfg.ledBlue           = static_cast<uint8_t>(qSettings.value(QStringLiteral("ledBlue"), 0).toUInt());
-    cfg.pollingRate       = static_cast<attackshark::PollingRate>(qSettings.value(QStringLiteral("pollingRate"), 3).toInt());
-    cfg.angleSnap         = qSettings.value(QStringLiteral("angleSnap"), false).toBool();
-    cfg.rippleControl     = qSettings.value(QStringLiteral("rippleControl"), false).toBool();
-    cfg.sleepTimeMin      = qSettings.value(QStringLiteral("sleepTime"), 5).toInt();
-    cfg.deepSleepTimeMin  = qSettings.value(QStringLiteral("deepSleepTime"), 10).toInt();
-    cfg.keyResponseTimeMs = qSettings.value(QStringLiteral("keyRespTime"), 8).toInt();
-
-    applyConfigToUi(cfg);
+    applyConfigToUi(attackshark::profiles::readConfig(qSettings));
 
     QString devPath = qSettings.value(QStringLiteral("devicePath")).toString();
     const QString resolved = attackshark::AttackSharkDevice::resolveConfigHidrawPath(devPath);
@@ -429,22 +411,7 @@ void atsx11::loadSettings()
 void atsx11::saveSettings()
 {
     QSettings qSettings(kSettingsOrg, kSettingsApp);
-    const attackshark::MouseConfig cfg = collectUiConfig();
-
-    for (int i = 0; i < attackshark::kDpiStagesCount; ++i) {
-        qSettings.setValue(QStringLiteral("dpiStage%1").arg(i + 1), cfg.dpiStages[i].dpi);
-    }
-    qSettings.setValue(QStringLiteral("activeDpiStage"), cfg.activeDpiStage);
-    qSettings.setValue(QStringLiteral("colorMode"),      static_cast<int>(cfg.colorMode));
-    qSettings.setValue(QStringLiteral("ledRed"),         cfg.ledRed);
-    qSettings.setValue(QStringLiteral("ledGreen"),       cfg.ledGreen);
-    qSettings.setValue(QStringLiteral("ledBlue"),        cfg.ledBlue);
-    qSettings.setValue(QStringLiteral("pollingRate"),    static_cast<int>(cfg.pollingRate));
-    qSettings.setValue(QStringLiteral("angleSnap"),      cfg.angleSnap);
-    qSettings.setValue(QStringLiteral("rippleControl"),  cfg.rippleControl);
-    qSettings.setValue(QStringLiteral("sleepTime"),      cfg.sleepTimeMin);
-    qSettings.setValue(QStringLiteral("deepSleepTime"),  cfg.deepSleepTimeMin);
-    qSettings.setValue(QStringLiteral("keyRespTime"),    cfg.keyResponseTimeMs);
+    attackshark::profiles::writeConfig(qSettings, collectUiConfig());
     qSettings.sync();
 }
 
@@ -618,8 +585,16 @@ void atsx11::onSettingsDeviceSelected(const QString &devicePath)
     connectToDevice(devicePath);
 }
 
-void atsx11::reloadSettingsUi()
+void atsx11::reloadSettingsUi(const QString &profileName)
 {
     loadSettings();
+    if (!m_device.isConnected()) {
+        QMessageBox::warning(m_settingsDialog, QStringLiteral("No valid mouse selected"),
+            QStringLiteral("Mouse not selected or connected."));
+        return;
+    }
+
     performAutoApply();
+    QMessageBox::information(m_settingsDialog, QStringLiteral("Success"),
+        QStringLiteral("Profile \"%1\" applied to %2.").arg(profileName, m_device.currentHidrawPath()));
 }

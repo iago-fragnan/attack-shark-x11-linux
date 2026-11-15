@@ -43,7 +43,7 @@ private slots:
     void on_btn_settings_clicked();
     void on_btn_ledColor_clicked();
     void onSettingsDeviceSelected(const QString &devicePath);
-    void reloadSettingsUi();
+    void reloadSettingsUi(const QString &profileName);
     void onBatteryStatusUpdated(const attackshark::BatteryStatus &status);
     void onConnectionModeChanged(bool isWired, const QString &hidrawPath);
     void onHardwareDpiStageChanged(int stageIndex);
